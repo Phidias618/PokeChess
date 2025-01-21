@@ -1,0 +1,519 @@
+#include <iostream>
+#include <cstring>
+
+#include "game.h"
+#include "Debugger.h"
+
+#include "SDL+.h"
+
+#include "board.h"
+
+interupted_music_saver::~interupted_music_saver() {
+	if (previous != NULL)
+		delete previous;
+}
+
+Mix_Music* current_music;
+interupted_music_saver* interupted_music;
+bool infinitely = false;
+
+Game::Game() : board(*new Board()) {
+	language = LANGUAGE::ENGLISH;
+	Mix_ReserveChannels(4);
+	scaling_factor = 1.0;
+	with_sounds = true;
+	music_volume = 64;
+
+	settings_music_time = 0.0;
+
+	corner_x = corner_y = 0;
+	drawing_board = Surface::createRGB((int)(18 * TILE_SIZE * scaling_factor), (int)(12 * TILE_SIZE*scaling_factor));
+	bg_color = Color::beige;
+
+	show_type_chart = false;
+	current_music = NULL;
+
+	global_buttons = new ButtonCollection();
+	global_buttons->add(new BoardButton(board));
+	global_buttons->add(new ShowTypechartButton(1.0, 0.0));
+	global_buttons->add(new TypechartDisplay());
+	global_buttons->add(new ExitGameButton(17.0, 0.0));
+	global_buttons->add(new SettingsButton(0.0, 0.0));
+
+	buttons = new ButtonCollection();
+
+	std::random_device rand;
+	RNG.seed(rand());
+
+	window = Display("test", 18 * TILE_SIZE, 12 * TILE_SIZE, SDL_WINDOW_RESIZABLE);
+	screen = window.get_surface();
+
+	is_holding_something = false;
+
+	selected_piece = NULL;
+	
+
+	nb_of_piece_with_type = 0;
+	selected_type = typeless;
+	is_type_avaible = 0xFFFFFFFF;
+
+	to_menu();
+	with_check = true;
+	with_RNG = true;
+	with_typing = true;
+	with_items = false;
+	with_random_battle = false;
+
+	winner = no_color;
+
+	selected_thing_sprite_x_offset = selected_thing_sprite_y_offset = 0;
+	mouse_x = mouse_y = 0;
+
+	in_check = false;
+}
+
+void Game::reset() {
+	
+	is_holding_something = false;
+	show_type_chart = false;
+
+	to_menu();
+
+	std::random_device rand;
+	RNG.seed(rand());
+
+	selected_piece = NULL;
+	winner = no_color;
+
+	nb_of_piece_with_type = 0;
+	selected_type = typeless;
+	is_type_avaible = 0xFFFFFFFF;
+
+	with_check = true;
+
+	in_check = false;
+
+	TextBoxDisplay::clear();
+
+	board.reset();
+}
+
+void Game::resize_drawing_board(int new_tile_size) {
+	double old_factor = scaling_factor;
+	scaling_factor = (double)new_tile_size / 64;
+	load_all_sprites(new_tile_size);
+
+	drawing_board = Surface::createRGB(18 * TILE_SIZE, 12 * TILE_SIZE);
+	board.resize_surface();
+	buttons->resize();
+	global_buttons->resize();
+	if (previous_buttons != NULL) {
+		previous_buttons->resize();
+	}
+}
+
+
+void Game::select_piece(Piece* piece) {
+	selected_piece = piece;
+	piece->square->update_graphic();
+
+	for (Square& square : board) {
+		if (piece->can_move_to(square)) {
+			square.is_accessible = true;
+			square.update_graphic();
+		}
+	}
+}
+
+void Game::unselect_piece() {
+	if (selected_piece == NULL) 
+		return;
+	int x = selected_piece->x; int y = selected_piece->y;
+	selected_piece = NULL;
+	is_holding_something = false;
+	board[x][y].update_graphic();
+
+	for (Square& square : board) {
+		if (square.is_accessible) {
+			square.is_accessible = false;
+			square.update_graphic();
+		}
+	}
+}
+
+void Game::draw(Surface surf, double x, double y, anchor c) {
+	SDL_Rect rect;
+	rect.x = (int)(x * TILE_SIZE) - (surf->w * (c & 0b11)) / 2;
+	rect.y = (int)(y * TILE_SIZE) - (surf->h * (c >> 2)) / 2;
+
+	drawing_board.blit(surf, &rect, NULL);
+}
+
+void Game::draw(Surface surf, double x, double y, double ax, double ay, double aw, double ah, anchor c) {
+	SDL_Rect rect;
+	rect.x = (int)(x * TILE_SIZE) - (surf->w * (c & 0b11) / 2);
+	rect.y = (int)(y * TILE_SIZE) - (surf->h * (c >> 2) / 2);
+	SDL_Rect a = { (int)(ax * TILE_SIZE), (int)(ay * TILE_SIZE), (int)(aw * TILE_SIZE), (int)(ah * TILE_SIZE) };
+	drawing_board.blit(surf, &rect, &a);
+}
+
+void Game::draw_rect(Color color, double x, double y, double w, double h) {
+	SDL_Rect rect = { (int)(x * TILE_SIZE), (int)(y * TILE_SIZE), (int)(w * TILE_SIZE), (int)(h * TILE_SIZE) };
+	SDL_FillSurfaceRect(drawing_board, &rect, color);
+
+}
+
+void Game::move_selected_piece_to(Square& square) {
+
+	TextBoxDisplay::clear();
+	if (current_music == promotion_end_music)
+		resume_background();
+
+	piece_color player = board.active_player;
+	Square* begin_square = selected_piece->square;
+
+	board.last_move_data = selected_piece->move_to(square);
+
+	Square* temp = board.last_move_begin_square;
+	board.last_move_begin_square = begin_square;
+	if (temp != NULL)
+		temp->update_graphic();
+	board.last_move_begin_square->update_graphic();
+
+	temp = board.last_move_end_square;
+	board.last_move_end_square = selected_piece->square;
+	if (temp != NULL)
+		temp->update_graphic();
+	board.last_move_end_square->update_graphic();
+
+	unselect_piece();
+
+	if (not board.last_move_data.interrupt_move)
+		resume_move();
+
+	if (board.last_move_data.promotion)
+		to_promotion(board.last_move_data.attacker);
+
+}
+
+void Game::resume_move() {
+	move_data data = board.last_move_data;
+	piece_color player = board.last_move_data.attacker->color;
+
+	if (with_typing) {
+		if (data.defender != NULL)
+			if (data.do_crit)
+				;
+			else if (data.do_miss)
+				;
+			else if (data.is_immune)
+				;
+			else
+				Mix_PlayChannel(0, slash_effect, 0);
+
+		if (data.en_passant)
+			add_textbox("Pawn uses\nEn passant");
+
+		bool is_in_check = board.kings[player]->is_in_check();
+		bool escaped_check = board.last_move_data.escaped_check;
+
+		if (data.castling) {
+			add_textbox("King uses castle");
+			if (not escaped_check and not is_in_check) {
+				add_textbox("That raises his\ndefense");
+				buttons->add(new StatBoostDisplay(board.kings[player], pokestat::defense, TextBoxDisplay::duration, +1));
+			}
+		}
+
+		if (data.do_miss) {
+			char buffer[64] = { '\0' };
+			strcpy_s(buffer, data.attacker->name);
+			strcat_s(buffer, "'s\nattack's missed");
+			add_textbox(buffer);
+		}
+		else if (data.is_immune) {
+			char buffer[64] = "It doesn't affect\n";
+			strcat_s(buffer, data.defender->name);
+			add_textbox(buffer);
+		}
+		else if (data.do_crit and not data.do_miss)
+			add_textbox("Critical hit!");
+
+		else if (data.is_not_very_effective)
+			add_textbox("It's not very\neffective...");
+		else if (data.is_super_effective)
+			add_textbox("It's super\neffective!");
+
+		if (escaped_check) {
+			add_textbox("King got away\nsafely");
+		}
+	}
+
+
+	if (data.move_again) {
+		board.in_bonus_move = true;
+		select_piece(data.attacker);
+		if (with_typing) {
+			if (data.was_in_check)
+				resume_background();
+			if (board.kings[board.active_player]->is_in_check()) {
+				interupt_background(check_music, -1);
+			}
+		}
+	}
+	else {
+		board.in_bonus_move = false;
+		change_turn();
+	}
+
+	if (board.nb_of_kings[white] == 0) {
+		to_end_of_game();
+		if (board.nb_of_kings[black] == 0) {
+			winner = no_color;
+		}
+		else {
+			winner = black;
+		}
+	}
+
+	else if (board.nb_of_kings[black] == 0) {
+		to_end_of_game();
+		winner = white;
+	}
+}
+
+void Game::change_turn() {
+	move_data data = board.last_move_data;
+	board.active_player = not board.active_player;
+
+	if (with_typing) {
+		if (data.was_in_check)
+			resume_background();
+		if (board.kings[board.active_player]->is_in_check()) {
+			interupt_background(check_music, -1);
+		}
+	}
+
+	check_for_end_of_game();
+}
+
+void Game::check_for_end_of_game() {
+	if (with_check and board.in_stalemate(board.active_player)) {
+		to_end_of_game();
+		if (board.kings[board.active_player]->is_in_check()) {
+			// checkmate congratulations
+			winner = not board.active_player;
+		}
+		else {
+			winner = no_color;
+		}
+	}
+}
+
+void Game::add_textbox(const char* message) {
+	buttons->add(new TextBoxDisplay(message));
+}
+
+void Game::to_menu() {
+	if (state == in_settings) {
+		exit_settings();
+	}
+	stop_background(100);
+	state = in_menu;
+
+	buttons->clear();
+	buttons->add(new BeginGameButton());
+	buttons->add(new DisableRNGButton(14.0, 3.0));
+	buttons->add(new RandomBattleButton(14.0, 4.0));
+}
+
+
+
+void Game::to_selection() {
+	state = in_selection;
+	buttons->clear();
+	buttons->add(new TypingSelectionButton(14.0, 3.0));
+	buttons->add(new SwitchSelectionButton(14.0, 1.5));
+	double x = 14.0;
+	double y = 2.5;
+	int i = 0;
+	for (ItemClass& Item : item_table) {
+		if (Item.type == terminator_item)
+			break;
+		if (game.with_RNG or not Item.is_RNG_dependant) {
+			if (Item.type == space_item)
+				goto space;
+			else if (Item.type == newline_item)
+				goto newline;
+			buttons->add(new ItemSelectionButton(x, y, Item));
+
+		space:
+		i++;
+		if (i == 6) {
+			newline:
+			i = 0;
+			x = 14.0;
+			y += 0.5;
+		}
+		else {
+			x += 0.5;
+		}
+		}
+	}
+
+	buttons->add(new RandomTypingButton(17.0, 10.0));
+	buttons->add(new ConfirmSelectionButton(17.0, 11.0));
+	
+	nb_of_piece_with_type = 0;
+	type_selection = true;
+	selected_type = typeless;
+	is_type_avaible = 0xFFFFFFFF;
+	with_check = false;
+}
+
+void Game::to_game(bool resume) {
+	state = in_game;
+
+	buttons->clear();
+	buttons->add(new SkipBonusMoveButton(9.0, 1.0));
+
+	selected_piece = NULL;
+
+	std::random_device rd;
+
+	RNG.seed(rd());
+
+	if (with_typing) {
+		if (resume) {
+			resume_background();
+		}
+		else {
+			play_background(battle_music);
+		}
+	}
+}
+
+void Game::to_end_of_game() {
+	state = end_of_game;
+	stop_background(1);
+	play_background(end_music, -1);
+
+	buttons->clear();
+	buttons->add(new EndOfGameButton());
+
+	for (Square& square : board) {
+		if (square.is_accessible) {
+			square.is_accessible = false;
+			square.update_graphic();
+		}
+	}
+}
+
+void Game::to_settings() {
+	interupt_background(settings_music, -1);
+	Mix_SetMusicPosition(settings_music_time);
+	show_type_chart = false;
+	previous_state = state;
+	previous_buttons = buttons;
+	state = in_settings;
+	buttons = new ButtonCollection();
+
+	buttons->add(new DisableSoundsButton(5.0+2.0, 2.0 + 2.0));
+	buttons->add(new VolumeSlider(5.0 + 2.0, 2.0 + 3.0));
+}
+
+void Game::exit_settings() {
+	settings_music_time = Mix_GetMusicPosition(settings_music);
+	resume_background();
+	state = previous_state;
+	buttons->clear();
+	delete buttons;
+	buttons = previous_buttons;
+	previous_buttons = NULL;
+	previous_state = no_state;
+}
+
+template<class T>
+Piece* constructor(Board& board_, piece_color color_, Square* sq, typing type_ = typeless, PokeItem* item=NULL) {
+	return new T(board_, color_, sq, type_, item);
+}
+
+
+void Game::to_promotion(Piece* promoting_pawn) {
+	promoting_piece = promoting_pawn;
+	
+	state = in_promotion;
+
+	buttons->clear();
+	if (promoting_pawn->item == NULL or not promoting_pawn->item->prepare_promotion()) {
+		buttons->add(new PromotionButton(Queen::cls, 7.0, 5.5));
+		buttons->add(new PromotionButton(Rook::cls, 8.0, 5.5));
+		buttons->add(new PromotionButton(Bishop::cls, 9.0, 5.5));
+		buttons->add(new PromotionButton(Knight::cls, 10.0, 5.5));
+	}
+
+	if (with_typing)
+		interupt_background(promotion_music, -1);
+}
+
+void Game::play_background(Mix_Music* music, int loop) {
+	current_music = music;
+	infinitely = (loop == -1);
+	Mix_PlayMusic(music, loop);
+}
+
+void Game::stop_background(int fadeout) {
+	Mix_FadeOutMusic(fadeout);
+	current_music = NULL;
+	if (interupted_music != NULL) {
+		delete interupted_music;
+		interupted_music = NULL;
+	}
+}
+
+void Game::interupt_background(Mix_Music* music, int loop) {
+	interupted_music = new interupted_music_saver{current_music, Mix_GetMusicPosition(current_music), infinitely, interupted_music};
+
+	play_background(music, loop);
+	if (loop == -1)
+		Mix_HookMusicFinished(NULL);
+	else
+		Mix_HookMusicFinished(resume_background);
+}
+
+void Game::resume_background() {
+	PRINT_DEBUG("resume");
+	if (interupted_music == NULL) {
+		PRINT_DEBUG("pas de musique a reprendre");
+		stop_background(0);
+	}
+	else
+	{	
+		if (interupted_music->music == NULL) {
+			Mix_FadeOutMusic(2000);
+		}
+		else {
+			PRINT_VAR(interupted_music->infinitely);
+			Mix_PlayMusic(interupted_music->music, (interupted_music->infinitely == 1)?-1:1);
+			Mix_SetMusicPosition(interupted_music->interupt_time);
+			if (interupted_music->infinitely)
+				Mix_HookMusicFinished(NULL);
+			else {
+				PRINT_DEBUG("bonjoir");
+				Mix_HookMusicFinished(resume_background);
+			}
+		}
+		infinitely = interupted_music->infinitely;
+		current_music = interupted_music->music;
+		auto temp = interupted_music;
+		interupted_music = interupted_music->previous;
+		temp->previous = NULL;
+
+		delete temp;
+	}
+}
+
+Game::~Game() {
+}
+
+Game game = Game();
