@@ -8,7 +8,7 @@ class Display;
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <SDL_mixer.h>
-#include "SDL_rotozoom.h"
+#include "SDL_gfx/SDL_rotozoom.h"
 
 #include <optional>
 #include <cstdio>
@@ -69,6 +69,7 @@ public:
 	static const Color beige;
 	static const Color orange;
 	static const Color pale_yellow;
+	static const Color sky;
 	
 };
 
@@ -87,6 +88,7 @@ const inline constexpr Color Color::grey = 0xFF808080;
 const inline constexpr Color Color::beige = 0xFFF5F5DC;
 const inline constexpr Color Color::orange = 0xFFFFA500;
 const inline constexpr Color Color::pale_yellow = 0xBBDFD869;
+const inline constexpr Color Color::sky = 0xFF82CBE5;
 
 inline constexpr SDL_Color Uint32_to_color(Color color) {
 	return { (Uint8)((Uint32)color >> 16), (Uint8)((Uint32)color >> 8), (Uint8)color, (Uint8)((Uint32)color >> 24) };
@@ -164,8 +166,8 @@ public:
 
 	inline int blit(Surface source, SDL_Rect* dest, const SDL_Rect* area=NULL, anchor c=top_left) {
 		if (dest != NULL) {
-			dest->x -= source->w * (c & 0b11) / 2;
-			dest->y -= source->h * (c >> 2) / 2;
+			dest->x -= ((area == NULL)? source->w: area->w) * (c & 0b11) / 2;
+			dest->y -= ((area == NULL) ? source->h : area->h) * (c >> 2) / 2;
 		}
 		return SDL_BlitSurface(source, area, surface, dest);
 	}
