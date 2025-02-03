@@ -7,6 +7,8 @@ class BoardIterator;
 
 #define self (*this)
 
+#include <forward_list>
+
 #include "SDL+.h"
 
 #include "game.h"
@@ -16,9 +18,12 @@ class Square {
 private:
 	Board* board;
 public:
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	const short x; // never change the postion of x and y in Square, they must remain at 8 and 10 bytes offset respectively
 	const short y; // never change the postion of x and y in Square, they must remain at 8 and 10 bytes offset respectively
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	bool is_accessible : 1;
@@ -36,10 +41,7 @@ public:
 	auto is_controlled_by(piece_color color) -> bool; 
 
 	// move the piece within this square to the graveyard
-	auto to_graveyard() -> void; 
-
-	// return wether a piece from the <color> side can attack this square
-	auto update_graphic() -> void; 
+	auto to_graveyard() -> void;
 
 	void draw();
 
@@ -81,7 +83,7 @@ private:
 public:
 	PieceClass layout[8];
 
-	King* kings[2];
+	std::forward_list<King*> king_list[2];
 	short nb_of_kings[2];
 	
 	short white_death;
@@ -105,6 +107,9 @@ public:
 	double miss_rate;
 
 	bool in_bonus_move;
+
+	int turn_number;
+	std::list<move_data> move_historic;
 
 	void resize_surface();
 

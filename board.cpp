@@ -62,14 +62,12 @@ auto Square::to_graveyard() -> void {
 		piece->is_in_graveyard = true;
 		if (piece->id == King::cls.id) {
 			board->nb_of_kings[piece->color]--;
+			board->king_list[piece->color].remove(reinterpret_cast<King*>(piece));
 		}
 		piece = NULL;
 	}
 }
 
-void Square::update_graphic() {
-	return;
-}
 
 auto Square::draw() -> void {
 	
@@ -91,21 +89,19 @@ auto Square::draw() -> void {
 	if (is_accessible) 
 		game.drawing_board.draw_disk((5 + x) * TILE_SIZE + (TILE_SIZE / 2), (9 - y) * TILE_SIZE + (TILE_SIZE / 2), TILE_SIZE / 4, board->possible_move_color);
 
-	if (piece != NULL and not (game.selected_piece == piece and game.is_holding_something)) {
+	if (piece != NULL and not (game.selected_piece == piece and game.is_holding_something) and (piece->color == board->active_player or game.state != in_selection)) {
 		game.draw(piece->sprite, 5 + x, 9 - y);
 	}
 }
 
 void Square::remove() {
 	piece = NULL;
-	update_graphic();
 }
 
 auto Square::clear() -> void {
 	if (piece != NULL) {
 		delete piece;
 		piece = NULL;
-		update_graphic();
 	}
 }
 
@@ -160,6 +156,7 @@ Piece* null_constructor(Board& board_, piece_color color_, Square* sq, typing ty
 }
 
 auto Board::clear() -> void {
+	turn_number = 0;
 	File* row_ptr = grid;
 	File* end_row_ptr = row_ptr + 8;
 	for (; row_ptr < end_row_ptr; row_ptr++) {
@@ -198,25 +195,20 @@ void Board::reset() {
 		if (layout[i] != NULL)
 			file[0].piece = layout[i](*this, white, &file[0], typeless, NULL);
 		file[0].is_accessible = false;
-		file[0].update_graphic();
 
 		file[1].piece = new Pawn(*this, white, &file[1], typeless, NULL);
 		file[1].is_accessible = false;
-		file[1].update_graphic();
 
 
 		file[6].piece = new Pawn(*this, black, &file[6], typeless, NULL);
 		file[6].is_accessible = false;
-		file[6].update_graphic();
 
 		if (layout[i] != NULL)
 			file[7].piece = layout[i](*this, black, &file[7], typeless, NULL);
 		file[7].is_accessible = false;
-		file[7].update_graphic();
 
 		for (int j = 2; j < 6; j++) {
 			file[j].is_accessible = false;
-			file[j].update_graphic();
 		}
 	}
 	
@@ -227,7 +219,6 @@ void Board::resize_surface() {
 	for (Square& square : self) {
 		if (square.piece != NULL)
 			square.piece->resize_sprite();
-		square.update_graphic();
 	}
 
 	for (int i = 0; i < white_death; i++)
@@ -246,6 +237,7 @@ auto Board::operator[](int i) -> File& {
 }
 
 Board::Board() {
+	turn_number = 0;
 	if (not is_cls_init) {
 		init_all_cls();
 	}
@@ -277,7 +269,6 @@ Board::Board() {
 	layout[4] = King::cls;
 
 	nb_of_kings[white] = nb_of_kings[black] = 0;
-	kings[0] = kings[1] = NULL;
 
 	memset(white_graveyard, NULL, 16);
 	memset(black_graveyard, NULL, 16);
@@ -304,18 +295,14 @@ Board::Board() {
 		File& file = grid[i];
 		if (layout[i] != NULL)
 			file[0].piece = layout[i](self, white, &file[0], typeless, NULL);
-		file[0].update_graphic();
 
 		file[1].piece = new Pawn(self, white, &file[1], typeless, NULL);
-		file[1].update_graphic();
 
 
 		file[6].piece = new Pawn(self, black, &file[6], typeless, NULL);
-		file[6].update_graphic();
 
 		if (layout[i] != NULL)
 			file[7].piece = layout[i](self, black, &file[7], typeless, NULL);
-		file[7].update_graphic();
 	}
 	/*self[4][7].piece = new King(self, black, &self[4][7], typeless, no_item);
 	self[4][7].update_graphic();*/

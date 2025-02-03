@@ -86,7 +86,7 @@ public:
 
 	PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> constructor, int id);
 
-	bool operator==(void*);
+	bool operator==(void*) const;
 
 	PieceClass& operator=(const PieceClass& other);
 
@@ -101,7 +101,7 @@ public:
 
 
 
-bool operator==(void* other, const PieceClass& Class);
+bool operator==(void* other, const PieceClass Class);
 
 
 class Piece {
@@ -134,7 +134,9 @@ public:
 
 	bool do_control(Square& target);
 
-	virtual move_data move_to(Square& square); // move to itself to the desired square, while returning some informations about the move
+	move_data move_to(Square& square);
+
+	virtual move_data base_move_to(Square& square); // move to itself to the desired square, while returning some informations about the move
 
 	inline int get_x() {
 		return ((short*)square)[4];
@@ -173,7 +175,7 @@ public:
 
 	auto virtual base_do_control(Square& target_square) -> bool;
 
-	auto virtual move_to(Square& target_square) ->move_data;
+	auto virtual base_move_to(Square& target_square) ->move_data;
 
 	bool is_in_check(bool base_rule=false);
 
@@ -196,7 +198,7 @@ public:
 
 	auto virtual base_do_control(Square& target_square) -> bool;
 
-	auto virtual move_to(Square& square) ->move_data;
+	auto virtual base_move_to(Square& square) ->move_data;
 
 	friend class LeppaBerry;
 	friend class PokeItem;

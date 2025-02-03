@@ -2,15 +2,14 @@
 /*je dois manger au moin une piece du range précedant avant de pouvour manger un piece d'un certain rang (pion, cavalier, fou, tour, dame, roi)*/
 #include <cstdint>
 #include <string>
-#include "float32_enum.cpp"
-#include "pythonic.h"
 
 enum class LANGUAGE : long {
 	FRENCH,
 	ENGLISH,
 	GERMAN,
 	SPANISH,
-	// maybe more later
+	ITALIAN,
+	// maybe more later, or not
 	NB_OF_LANGUAGE,
 };
 
@@ -75,6 +74,37 @@ enum effectiveness_enum : char {
 	neutral = 2,
 	super_effective = 3,
 };
+#if false
+const char* defensive_effectiveness_str[(int)LANGUAGE::NB_OF_LANGUAGE][4] = {
+	{ // FRENCH
+		"immunitées",
+		"resiste",
+		"",
+		"faiblesses"
+	},
+	{ // ENGLISH
+		"immunity",
+		"resist",
+		"",
+		"weaknesses",
+	}
+};
+
+const char* offensive_effectiveness_str[(int)LANGUAGE::NB_OF_LANGUAGE][4] = {
+	{ // FRENCH
+		"inefficace",
+		"resisté",
+		"",
+		"super efficace"
+	},
+	{ // ENGLISH
+		"uneffective",
+		"resisted",
+		"",
+		"super effective",
+	}
+};
+#endif
 
 struct effectiveness {
 	effectiveness_enum main;
@@ -116,4 +146,4 @@ inline bool operator==(effectiveness_enum e, const effectiveness x) {
 /*the line typing corresponds to the attacking typing while the column typing corresponds to the defensive typing*/
 extern effectiveness_enum const typechart[18][18];
 
-#define for_typing(var) for (typing var = normal; var <= fairy; var++)
+#define iter_typing(var) for (typing var = normal; var <= fairy; var++)

@@ -1,8 +1,6 @@
 #include "poketyping.h"
 
 #include <cstdint>
-#include "float32_enum.cpp"
-#include "pythonic.h"
 
 /*
 This file contains all things that are related to pokemon in pokemon chess

@@ -182,9 +182,9 @@ public:
 };
 
 class TypingSelectionButton : public Button {
-
+	typing type;
 public:
-	TypingSelectionButton(double x_, double y_);
+	TypingSelectionButton(double x_, double y_, typing);
 
 	virtual bool is_active();
 
@@ -240,20 +240,23 @@ class TextBoxDisplay : public Button {
 	short text_index;
 	short timer;
 	bool is_on_second_line : 1;
+	int shift_timer;
+	int shift_delay;
 	piece_color side : 2;
 
 
 	static std::queue<TextBoxDisplay*> queue;
 
-	static inline const int constexpr BUFFER_SIZE = 84;
+	static inline const int constexpr BUFFER_SIZE = 1024;
 	char message[BUFFER_SIZE];
 
 	static const short begin_x = 18;
 	static const short begin_y = 32;
-	static const short x_pixel_increment = 16;
+	static const short char_per_line = 18;
+	static const short char_width = 16;
 	static const short y_pixel_increment = 32;
 public:
-	static const int duration = FPS;
+	static const int duration = FPS / 2;
 
 	static void clear() {
 		if (queue.empty())
@@ -275,6 +278,8 @@ public:
 	virtual bool is_active();
 
 	virtual void draw();
+
+	virtual ~TextBoxDisplay();
 };
 
 class SkipBonusMoveButton : public Button {
@@ -389,10 +394,62 @@ public:
 
 class BoardButton : public Button {
 	Board& board;
+	bool is_first_unhold;
+	bool no_unclick;
 public:
 	BoardButton(Board& b);
 
 	virtual void draw();
+	virtual bool is_active();
 	virtual void effect(int, double, double);
 	virtual void unhold(int, double, double);
+};
+
+
+class InformationDisplay : public Button {
+	Piece* displayed_piece;
+	typing displayed_type;
+	ItemClass* displayed_item;
+	int displayed_page;
+
+	Surface screen;
+	LANGUAGE language;
+	int edge;
+	void re_draw();
+
+public:
+	InformationDisplay(double x, double y);
+
+	virtual void draw();
+
+	virtual bool is_active();
+
+	virtual void resize();
+
+	virtual Button::update_return_code update();
+
+	friend class PhoneSwitchPage;
+};
+
+class PhoneSwitchPage : public Button {
+	bool is_right;
+public:
+	PhoneSwitchPage(double x, double y, bool is_right);
+
+	virtual void draw();
+
+	virtual bool is_active();
+
+	virtual void effect(int, double, double);
+};
+
+class ToggleInformationDisplay : public Button {
+public:
+	ToggleInformationDisplay(double x, double y);
+
+	virtual void draw();
+
+	virtual bool is_active();
+
+	virtual void effect(int, double, double);
 };

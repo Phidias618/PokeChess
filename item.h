@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SDL+.h"
+#include "assets.h"
 
 class Piece;
 class PokeItem;
@@ -14,24 +15,26 @@ enum item_placeholder_type {
 };
 
 struct ItemClass {
-	ItemClass();
-
-	ItemClass(PokeItem* (*)(Piece*, ItemClass&), bool (*would_be_useful)(Piece*), void (*draw)(Surface, SDL_Rect*, anchor), void (*)(char*&), bool RNG);
+private:
+	ItemClass(PokeItem* (*)(Piece*, ItemClass&), int (*usefulness_tier)(Piece*), void (*draw)(Surface, SDL_Rect*, size, anchor), void (*)(char*&), const char* name_[], bool RNG);
 
 	PokeItem* (*constructor)(Piece*, ItemClass&);
-	void (*_draw)(Surface, SDL_Rect*, anchor);
+	void (*_draw)(Surface, SDL_Rect*, size, anchor);
 	void (*_update_description)(char*&);
 
 	friend void* init_item_table(void);
 public:
+	ItemClass();
+
 	item_placeholder_type type;
 	bool is_avaible;
 	bool is_RNG_dependant;
 	char* description;
-	
-	bool (*would_be_useful)(Piece*);
-	inline void draw(Surface s, SDL_Rect* r = NULL, anchor a = top_left) {
-		_draw(s, r, a);
+	const char** name;
+
+	int (*usefulness_tier)(Piece*);
+	inline void draw(Surface surface, SDL_Rect* rect = NULL, size s=regular, anchor a = top_left) {
+		_draw(surface, rect, s, a);
 	}
 
 	inline void update_description() {
@@ -99,7 +102,10 @@ public:
 	static Surface get_sprite() { return NULL; }
 
 	// occurs when given items at random
-	static bool would_be_useful(Piece* piece) { return true; }
+	// negative : the item is detrimental
+	// zero : the item would have no effect on piece
+	// positive : the item can be useful
+	static int usefulness_tier(Piece* piece) { return 0; }
 
 	// called when attacking a piece
 	virtual void attack_modifier(effectiveness& e, Piece* defenser) {}
@@ -122,10 +128,10 @@ public:
 	virtual move_data move_to(Square& target);
 
 	// called after a move is done
-	virtual void after_move_effects(Piece* defenser, move_data& data) {}
+	virtual void after_move_effects(move_data& data) {}
 
-	// called when killed
-	virtual void revenge(Piece* attacker, move_data& data) {}
+	// called when killed or attempted to be killed
+	virtual void revenge(move_data& data) {}
 
 	// called when getting the sprites for the promotion selection (on dummy pieces) and after promoting
 	virtual void promote(bool not_dummy = true) {}

@@ -167,8 +167,7 @@
     <ClCompile Include="piece.cpp" />
     <ClCompile Include="poketyping.cpp" />
     <ClCompile Include="SDL+.cpp" />
-    <ClCompile Include="SDL_rotozoom.c" />
-    <ClCompile Include="utility.cpp" />
+    <ClCompile Include="SDL_gfx/SDL_rotozoom.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="assets.h" />
@@ -181,9 +180,7 @@
     <ClInclude Include="poketyping.h" />
     <ClInclude Include="pythonic.h" />
     <ClInclude Include="SDL+.h" />
-    <ClInclude Include="SDL_rotozoom.h" />
     <ClInclude Include="softref.h" />
-    <ClInclude Include="utility.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

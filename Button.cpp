@@ -63,9 +63,12 @@ std::ostream& operator<<(std::ostream& os, ButtonCollection::Node* node) {
 	}
 	return os;
 }
-
+#define SHOW_BUTTON_HITBOX true
 void ButtonCollection::draw() {
 	Node* tmp;
+#if SHOW_BUTTON_HITBOX
+	static int counter = 0;
+#endif
 	for (Node* current = first; current != NULL; current = tmp) {
 		tmp = current->next;
 		if (current->button->is_active()) {
@@ -77,8 +80,18 @@ void ButtonCollection::draw() {
 			else
 				current->button->was_just_activated = false;
 
-			if (current->button->update() != Button::suicide)
+#if SHOW_BUTTON_HITBOX
+			counter++;
+			if (current->button->update() != Button::suicide) {
 				current->button->draw();
+				if (counter % 2)
+					game.draw_rect(Color::red, current->button->x, current->button->y, current->button->w, current->button->h);
+			}
+#else
+			if (current->button->update() != Button::suicide) {
+				current->button->draw();
+			}
+#endif
 
 		}
 		else
@@ -268,14 +281,15 @@ void PromotionButton::draw() {
 }
 
 void PromotionButton::effect(int mouse_button, double, double) {
+
 	if (mouse_button != SDL_BUTTON_LEFT)
 		return;
 	Piece* piece = game.promoting_piece;
 	Square* square = piece->square;
 	PokeItem* item = piece->item;
 	square->piece = piece_constructor(game.board, piece->color, square, piece->type, piece->item);
-	item->holder = square->piece;
-	square->update_graphic();
+	if (item != NULL)
+		item->holder = square->piece;
 	
 	delete piece;
 
@@ -284,7 +298,6 @@ void PromotionButton::effect(int mouse_button, double, double) {
 
 	game.to_game(true);
 	if (game.with_typing) {
-
 		char buffer[64] = "Pawn evolved into\n";
 		strcat_s(buffer, square->piece->name);
 		game.add_textbox(buffer);
@@ -298,30 +311,26 @@ void PromotionButton::effect(int mouse_button, double, double) {
 }
 
 
-TypingSelectionButton::TypingSelectionButton(double x_, double y_) : Button(x_, y_, 6.0, 6.0) {
-	;
+TypingSelectionButton::TypingSelectionButton(double x_, double y_, typing type_) : Button(x_, y_, 1.0, 1.0) {
+	type = type_;
 }
 
 bool TypingSelectionButton::is_active() {
-	return game.type_selection;
+	return game.type_selection and (game.is_type_avaible & (1 << type)) != 0;
 }
 
 void TypingSelectionButton::draw() {
-	for (typing type = normal; type <= fairy; type++) {
-		if ((game.is_type_avaible >> type) & 1) {
-			game.draw(typing_icon[type], x + type % 3, y + type / 3);
-		}
-	}
+	game.draw(typing_icon[type], x, y);
 }
 
 void TypingSelectionButton::effect(int mouse_button, double x_, double y_){
 	if (mouse_button != SDL_BUTTON_LEFT)
 		return;
-	int tile_x = (int)x_;
-	int tile_y = (int)y_;
-
-	typing type = (typing) (tile_x + 3 * tile_y);
 	
+	if (game.selected_type != typeless) {
+		game.is_type_avaible |= (1 << game.selected_type);
+	}
+
 	if ((game.is_type_avaible >> type) & 1) {
 		// the type is still avaible
 		game.is_type_avaible &= ~(1 << type); // makes the typing no longer avaible
@@ -329,9 +338,12 @@ void TypingSelectionButton::effect(int mouse_button, double x_, double y_){
 		game.selected_type = type;
 		game.selected_thing_sprite = typing_icon[type].scale_to(TILE_SIZE / 2, TILE_SIZE / 2, 1);
 
-		game.selected_thing_sprite_x_offset = (x_ - tile_x) / 2;
-		game.selected_thing_sprite_y_offset = (y_ - tile_y) / 2;
+		game.selected_thing_sprite_x_offset = x_ / 2;
+		game.selected_thing_sprite_y_offset = y_ / 2;
 
+		game.phone_displayed_item = NULL;
+		game.phone_displayed_piece = NULL;
+		game.phone_displayed_type = type;
 	}
 }
 
@@ -349,7 +361,7 @@ bool ItemSelectionButton::is_on_button(int mouse_button, double x, double y) {
 
 void ItemSelectionButton::draw() {
 	SDL_Rect rect(x * TILE_SIZE, y * TILE_SIZE, ITEM_SIZE, ITEM_SIZE);
-	Item.draw(game.drawing_board, &rect, top_left);
+	Item.draw(game.drawing_board, &rect);
 }
 
 Surface ItemSelectionButton::surface = Surface::createRGBA(ITEM_SIZE, ITEM_SIZE);
@@ -360,24 +372,33 @@ void ItemSelectionButton::effect(int mouse_click, double x_, double y_) {
 		game.is_holding_something = false;
 		game.selected_item = NULL;
 	}
-	else if (mouse_click == SDL_BUTTON_LEFT) {
+
+	switch (mouse_click) {
+	case SDL_BUTTON_LEFT:
 		game.selected_item = &Item;
 		Item.is_avaible = false;
 		game.is_holding_something = true;
 		game.selected_thing_sprite_x_offset = x_;
 		game.selected_thing_sprite_y_offset = y_;
-		if (surface->w != ITEM_SIZE) {
+		if (surface == NULL or surface->w != ITEM_SIZE) {
 			surface = Surface::createRGBA(ITEM_SIZE, ITEM_SIZE);
 		}
 		surface.clear();
 		SDL_Rect rect(0, 0, ITEM_SIZE, ITEM_SIZE);
-		Item.draw(surface, &rect, top_left);
+		Item.draw(surface, &rect);
 		game.selected_thing_sprite = surface;
-	}
-	if (mouse_click == SDL_BUTTON_RIGHT) {
-		if (Item.description != NULL) 
+
+		if (game.show_phone) {
+			game.phone_displayed_item = &Item;
+			game.phone_displayed_piece = NULL;
+		}
+
+		if (Item.description != NULL)
 			std::cout << Item.description << '\n';
+		break;
 	}
+	
+	
 	
 }
 
@@ -403,6 +424,10 @@ void ConfirmSelectionButton::effect(int mouse_button, double, double) {
 		item.is_avaible = true;
 	}
 	
+	game.phone_displayed_item = NULL;
+	game.phone_displayed_type = typeless;
+	game.phone_displayed_piece = NULL;
+
 	if ((game.board.active_player = not game.board.active_player) == white){
 		game.to_game();
 	}
@@ -446,7 +471,6 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 				Square& square = game.board[i % 8][i / 8];
 				if (square.piece != NULL) {
 					square.piece->set_type(list[i]);
-					square.update_graphic();
 					game.is_type_avaible &= ~(1 << list[i]); // makes the type not avaible
 				}
 			}
@@ -455,7 +479,6 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 				Square& square = game.board[i % 8][i / 8 + 6];
 				if (square.piece != NULL) {
 					square.piece->set_type(list[i]);
-					square.update_graphic();
 					game.is_type_avaible &= ~(1 << list[i]); // makes the type not avaible
 				}
 			}
@@ -475,41 +498,27 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 		}
 
 		while (j > 0) {
+			Piece* piece = game.board[x][y].piece;
 			std::shuffle(list, list + NB_OF_ITEMS, gen);
-			bool any = false;
+			std::sort(
+				list, 
+				list + NB_OF_ITEMS, 
+				[&piece]
+				(const ItemClass* x, const ItemClass* y) -> bool {
+					return x->usefulness_tier(piece) >= y->usefulness_tier(piece); 
+				}
+			);
 			for (ItemClass* Item : list) {
 				if (Item->type == normal_item and (game.with_RNG or not Item->is_RNG_dependant) and Item->is_avaible) {
-					Piece* piece = game.board[x][y].piece;
-					if (Item->would_be_useful(piece)) {
-						any = true;
-						Item->is_avaible = false;
-						piece->set_item((*Item)(piece));
-						piece->square->update_graphic();
-						x++;
-						if (x == 8) {
-							x = 0;
-							y++;
-						}
-						j--;
-						break;
+					Item->is_avaible = false;
+					piece->set_item((*Item)(piece));
+					x++;
+					if (x == 8) {
+						x = 0;
+						y++;
 					}
-				}
-			}
-			if (not any) {
-				for (ItemClass* Item : list) {
-					if (Item->type == normal_item and (game.with_RNG or not Item->is_RNG_dependant) and Item->is_avaible) {
-						Piece* piece = game.board[x][y].piece;
-						Item->is_avaible = false;
-						piece->set_item((*Item)(piece));
-						piece->square->update_graphic();
-						x++;
-						if (x == 8) {
-							x = 0;
-							y++;
-						}
-						j--;
-						break;
-					}
+					j--;
+					break;
 				}
 			}
 		}
@@ -525,8 +534,16 @@ void SwitchSelectionButton::draw() {
 	switch (game.language) {
 	case LANGUAGE::ENGLISH:
 		txt = (game.type_selection) ? "Types" : "Items";
+		break;
 	case LANGUAGE::FRENCH:
 		txt = (game.type_selection) ? "Types" : "Objets";
+		break;
+	case LANGUAGE::GERMAN:
+		txt = (game.type_selection) ? "Typen" : "Objekte";
+		break;
+	case LANGUAGE::SPANISH:
+		txt = (game.type_selection) ? "Typos" : "Objetos";
+		break;
 	}
 
 	game.draw(CSM_font_array[TILE_SIZE / 2].render_shaded(txt, Color::black, game.bg_color), x, y);
@@ -534,6 +551,14 @@ void SwitchSelectionButton::draw() {
 
 void SwitchSelectionButton::effect(int, double, double) {
 	game.type_selection = not game.type_selection;
+	if (game.selected_item != NULL) {
+		game.selected_item->is_avaible = true;
+	}
+	else if (game.selected_type != typeless) {
+		game.is_type_avaible |= (1 << game.selected_type);
+	}
+	game.is_holding_something = false;
+
 }
 
 std::queue<TextBoxDisplay*> TextBoxDisplay::queue = std::queue<TextBoxDisplay*>();
@@ -543,6 +568,8 @@ TextBoxDisplay::TextBoxDisplay(const char* text) : Button(5.0, 0.0, 8.0, textbox
 	sprite.blit(textbox_frame, NULL, NULL);
 	visual_index = text_index = 0;
 	timer = 0;
+	shift_timer = 0;
+	shift_delay = 0;
 	is_on_second_line = false;
 	x = 5.0;
 	side = black;
@@ -574,15 +601,32 @@ void TextBoxDisplay::activate() {
 }
 
 Button::update_return_code TextBoxDisplay::update() {
+	if (shift_delay > 0) {
+		shift_delay--;
+		return Button::nothing;
+	}
+	if (shift_timer > 0) {
+		shift_timer--;
+		SDL_Rect dest(begin_x, begin_y, 0, 0);
+		SDL_Rect area(begin_x, begin_y + 4, char_per_line * char_width, char_width + y_pixel_increment);
+		sprite.blit(sprite, &dest, &area);
+
+		return Button::nothing;
+	}
 	char displayed_char = (text_index >= BUFFER_SIZE) ? '\0' : message[text_index];
 	if (displayed_char != '\0') {
 		if (displayed_char == '\n') {
 			visual_index = 0;
-			is_on_second_line = true;
+			if (not is_on_second_line)
+				is_on_second_line = true;
+			else {
+				shift_delay = FPS / 4;
+				shift_timer = y_pixel_increment / 4;
+			}
 		}
 		else if (displayed_char < 128) {
 			SDL_Rect r;
-			r.x = begin_x + x_pixel_increment * visual_index - (displayed_char=='\'')*2;
+			r.x = begin_x + char_width * visual_index - (displayed_char=='\'')*2;
 			r.y = begin_y + y_pixel_increment * is_on_second_line;
 
 			Surface char_surface = poke_charset.chop({ (displayed_char % 16) * 16, (displayed_char / 16) * 16, 16, 16 });
@@ -595,13 +639,13 @@ Button::update_return_code TextBoxDisplay::update() {
 		}
 		text_index++;
 	}
-	
-	timer--;
-	if (timer < 0) {
-		queue.pop();
-		kill();
-		delete this;
-		return Button::suicide;
+	else {
+		timer--;
+		if (timer < 0) {
+			kill();
+			delete this;
+			return Button::suicide;
+		}
 	}
 	return Button::nothing;
 }
@@ -609,6 +653,10 @@ Button::update_return_code TextBoxDisplay::update() {
 void TextBoxDisplay::draw() {
 	Surface scaled = sprite.scale_by(8.0 * TILE_SIZE / sprite->w, true);
 	game.draw(scaled, x, y, (side == white) ? bottom_left : top_left);
+}
+
+TextBoxDisplay::~TextBoxDisplay() {
+	queue.pop();
 }
 
 SkipBonusMoveButton::SkipBonusMoveButton(double x_, double y_) : Button(x_ - skip_button->w / 2.0 / TILE_SIZE, y_ - skip_button->h / 2.0 / TILE_SIZE, (double)skip_button->w / TILE_SIZE, (double)skip_button->h / TILE_SIZE) {
@@ -730,9 +778,9 @@ void ShowTypechartButton::resize() {
 	SDL_Rect r;
 	r.w = r.h = a;
 	r.x = 1;
-	for_typing(i) {
+	iter_typing(i) {
 		r.y = 1;
-		for_typing(j) {
+		iter_typing(j) {
 
 			switch (typechart[j][i]) {
 			case neutral:
@@ -963,7 +1011,12 @@ void RandomBattleButton::effect(int, double, double) {
 
 
 BoardButton::BoardButton(Board& b) : board(b), Button(5, 2, 8, 8) {
-	;
+	is_first_unhold = true;
+	no_unclick = false;
+}
+
+bool BoardButton::is_active() {
+	return game.state != in_settings;
 }
 
 void BoardButton::draw() {
@@ -986,50 +1039,76 @@ void BoardButton::effect(int mouse_button, double x, double y) {
 			game.move_selected_piece_to(selected_square);
 		}
 		else {
-			if (game.selected_piece != NULL) {
-				game.unselect_piece();
-			}
-			if (piece != NULL && piece->color == game.board.active_player) {
+			if (game.selected_piece == piece && piece != NULL) {
+				is_first_unhold = false;
 				game.is_holding_something = true;
 				game.selected_thing_sprite_x_offset = (x - tile_x);
 				game.selected_thing_sprite_y_offset = y - (7 - tile_y);
 				game.selected_thing_sprite = piece->sprite;
-				game.select_piece(piece);
+
+			}
+			else {
+				if (game.selected_piece != NULL) {
+					game.unselect_piece();
+				}
+				if (piece != NULL && piece->color == game.board.active_player) {
+					game.is_holding_something = true;
+					game.selected_thing_sprite_x_offset = (x - tile_x);
+					game.selected_thing_sprite_y_offset = y - (7 - tile_y);
+					game.selected_thing_sprite = piece->sprite;
+					game.select_piece(piece);
+				}
+			}
+			
+			if (piece != NULL) {
+				game.phone_displayed_piece = piece;
+				game.phone_displayed_type = typeless;
+				game.phone_displayed_item = NULL;
 			}
 		}
 		break;
 	case in_selection:
 		if (game.type_selection) {
 			if (piece != NULL and piece->color == game.board.active_player) {
-				if (piece->type != typeless) {
-					game.is_type_avaible |= (1 << selected_square.piece->type); // add the old type of the piece to the type pool
-					piece->set_type(typeless);
-					game.nb_of_piece_with_type--;
-				}
 				if (game.selected_type != typeless) {
+					if (piece->type != typeless) {
+						game.is_type_avaible |= (1 << selected_square.piece->type); // add the old type of the piece to the type pool
+						game.nb_of_piece_with_type--;
+					}
+					game.nb_of_piece_with_type++;
 					piece->set_type(game.selected_type);
+					no_unclick = true;
 					game.selected_type = typeless;
 					game.selected_thing_sprite = NULL;
 					game.is_holding_something = false;
-					game.nb_of_piece_with_type++;
 				}
+			}
+			else {
+				if (game.selected_type != typeless) 
+					game.is_type_avaible |= (1 << game.selected_type);
+				game.is_holding_something = false;
 			}
 		}
 		else {
-			PRINT_VAR(piece);
 			if (piece != NULL and piece->color == game.board.active_player) {
-				if (piece->item != NULL) {
-					piece->item->cls.is_avaible = true;
-					piece->set_item(NULL);
-					selected_square.update_graphic();
-				} 
 				if (game.selected_item != NULL) {
+					if (piece->item != NULL) {
+						piece->item->cls.is_avaible = true;
+						piece->set_item(NULL);
+					}
+
 					piece->set_item((*game.selected_item)(piece));
-					selected_square.update_graphic();
 					game.selected_item = NULL;
 					game.is_holding_something = false;
 					game.selected_thing_sprite = NULL;
+
+					no_unclick = true;
 				}
+			}
+			else {
+				if (game.selected_item != NULL)
+					game.selected_item->is_avaible = true;
+				game.is_holding_something = false;
 			}
 		}
 		break;
@@ -1037,24 +1116,552 @@ void BoardButton::effect(int mouse_button, double x, double y) {
 }
 
 void BoardButton::unhold(int mouse_button, double x, double y) {
-	if (not game.is_holding_something)
+	if (no_unclick) {
+		no_unclick = false;
 		return;
-	int tile_x = (int)(x - game.selected_thing_sprite_x_offset + game.selected_thing_sprite->w / 2.0 / TILE_SIZE); // x_position, in tile coordinates, of the center of game.selected_thing_sprite, relative to the bottom left corner,
-	int tile_y = 7 - (int)(y - game.selected_thing_sprite_y_offset + game.selected_thing_sprite->h / 2.0 / TILE_SIZE); // y position, in tile coordinates, of the center of game.selected_thing_sprite, relative to the bottom left corner
-	if (tile_x < 0 or tile_x >= 8 or tile_y < 0 or tile_y >= 0)
+	}
+	int tile_x;
+	int tile_y;
+	if (game.is_holding_something) {
+		tile_x = (int)(x - game.selected_thing_sprite_x_offset + game.selected_thing_sprite->w / 2.0 / TILE_SIZE); // x_position, in tile coordinates, of the center of game.selected_thing_sprite, relative to the bottom left corner,
+		tile_y = 7 - (int)(y - game.selected_thing_sprite_y_offset + game.selected_thing_sprite->h / 2.0 / TILE_SIZE); // y position, in tile coordinates, of the center of game.selected_thing_sprite, relative to the bottom left corner
+	}
+	else {
+		tile_x = (int)x;
+		tile_y = 7 - (int)y;
+	}
+	if (tile_x < 0 or tile_x >= 8 or tile_y < 0 or tile_y >= 8) {
+		is_first_unhold = true;
 		return;
+	}
+
 	Square& selected_square = game.board[tile_x][tile_y];
 	Piece* piece = selected_square.piece;
-
 	switch (game.state) {
 	case in_game:
-		if (game.is_holding_something and game.selected_piece != NULL)
+		if (game.is_holding_something and game.selected_piece != NULL) {
 			if (selected_square.is_accessible) {
+				is_first_unhold = true;
 				game.move_selected_piece_to(selected_square);
 			}
 			else {
 				game.is_holding_something = false;
-				game.board[game.selected_piece->x][game.selected_piece->y].update_graphic();
+				if (is_first_unhold) {
+					// is_first_unhold = false;
+				}
+				else {
+					game.unselect_piece();
+					is_first_unhold = true;
+				}
 			}
+		}
+		break;
+	case in_selection:
+		if (game.type_selection) {
+			if (game.selected_type == typeless and piece != NULL and piece->type != typeless and piece->color == game.board.active_player) {
+				game.selected_type = piece->type;
+				game.is_holding_something = true;
+				game.selected_thing_sprite = typing_icon[game.selected_type].scale_by(0.5, true);
+				piece->set_type(typeless);
+				game.nb_of_piece_with_type--;
+
+				game.phone_displayed_item = NULL;
+				game.phone_displayed_type = game.selected_type;
+				game.phone_displayed_piece = NULL;
+			}
+		}
+		else {
+			if (game.selected_item == NULL and piece != NULL and piece->item != NULL and piece->color == game.board.active_player) {
+				ItemClass& Item = piece->item->cls;
+				game.selected_item = &Item;
+				game.is_holding_something = true;
+
+				Surface square = Surface::createRGBA(ITEM_SIZE, ITEM_SIZE);
+				Item.draw(square);
+				game.selected_thing_sprite = square;
+
+				piece->set_item(NULL);
+
+				game.phone_displayed_item = &Item;
+				game.phone_displayed_type = typeless;
+				game.phone_displayed_piece = NULL;
+			}
+		}
+	}
+}
+
+
+InformationDisplay::InformationDisplay(double x_, double y_) : Button(x_ - 1.25, y_ - 1.6, 2.5, 4.6) {
+	displayed_type = typeless;
+	displayed_item = NULL;
+	displayed_piece = NULL;
+	screen = Surface::createRGB(TILE_SIZE * w, TILE_SIZE * h);
+	edge = 0.1 * TILE_SIZE;
+	language = LANGUAGE::FRENCH;
+}
+
+#define CAPITALIZE(str) { \
+	char* __str = (str); \
+	if ('a' <= __str[0] and __str[0] <= 'z')\
+		__str[0] += ('A' - 'a'); \
+	\
+}
+
+void InformationDisplay::draw() {
+	if (game.phone_displayed_item != displayed_item or game.phone_displayed_type != displayed_type or game.phone_displayed_piece != displayed_piece or game.phone_displayed_page != displayed_page or language != game.language) {
+		displayed_item = game.phone_displayed_item;
+		displayed_piece = game.phone_displayed_piece;
+		displayed_type = game.phone_displayed_type;
+		displayed_page = game.phone_displayed_page;
+		language = game.language;
+
+		re_draw();
+	}
+	game.draw(screen, x, y);
+	game.draw(phone_frame, x + w/2, y + h/2 - 0.45, center);
+}
+
+void InformationDisplay::resize() {
+	edge = 0.1 * TILE_SIZE;
+	screen = Surface::createRGB(TILE_SIZE * w, TILE_SIZE * h);
+	re_draw();
+}
+
+void InformationDisplay::re_draw() {
+	//game.draw_rect(Color::sky, x - 1.2, y - 1.9, 2.45, 4.8);
+	screen.fill(Color::sky);
+	// game.draw(phone_frame, x, y, center);
+	if (displayed_item != NULL) {
+		int X = w * TILE_SIZE / 2;
+		int Y = 0.35 * TILE_SIZE;
+		SDL_Rect rect(X, Y);
+		Surface title = CSM_font_array[TILE_SIZE / 3].render_shaded_wrapped(displayed_item->name[(int)language], Color::black, Color::sky, 2.4 * TILE_SIZE);
+		screen.blit(title, &rect, NULL, top_middle);
+		Y += title->h;
+		rect.y = Y;
+		rect.x = X;
+
+		displayed_item->draw(screen, &rect, mega, top_middle);
+		Y += TILE_SIZE;
+		X = edge;
+
+		rect.y = Y;
+		rect.x = X;
+
+		screen.blit(CSM_font_array[TILE_SIZE / 5].render_blended_wrapped(displayed_item->description, Color::black, TILE_SIZE * 2.3), &rect, NULL, top_left);
+	}
+	else if (displayed_type != typeless) {
+
+		char buffer[64] = "";
+		int i = 0;
+		switch (language) {
+		case LANGUAGE::FRENCH:
+			for (const char* begin = "Type "; *begin != '\0'; begin++) {
+				buffer[i++] = *begin;
+			}
+			for (const char* begin = type_str[(int)language][displayed_type]; *begin != '\0'; begin++) {
+				buffer[i++] = *begin;
+			}
+			//buffer[i++] = ' '; buffer[i++] = ':'; buffer[i++] = '\0';
+			
+			break;
+		case LANGUAGE::ENGLISH:
+			for (const char* begin = type_str[(int)language][displayed_type]; *begin != '\0'; begin++) {
+				buffer[i++] = *begin;
+			}
+			for (const char* begin = " type"; *begin != '\0'; begin++) {
+				buffer[i++] = *begin;
+			}
+			break;
+		}
+		
+
+		CAPITALIZE(buffer);
+
+		double const mini_size = 0.3;
+		SDL_Rect rect;
+		int Y = 0.4 * TILE_SIZE;
+		int X = w * TILE_SIZE / 2;
+		rect.x = X;
+		rect.y = Y;
+
+		screen.blit(CSM_font_array[(int)(TILE_SIZE / 3.1)].render_blended(buffer, Color::black), &rect, NULL, top_middle);
+		Y += (int)(0.45 * TILE_SIZE);
+		rect.x = X;
+		rect.y = Y;
+		screen.blit(typing_icon[displayed_type], &rect, NULL, top_middle);
+		Y += (int)(1.15 * TILE_SIZE);
+
+		bool any = false;
+		iter_typing(type) {
+			if (typechart[type][displayed_type] == immune) {
+				any = true;
+				break;
+			}
+		}
+		if (any) {
+			i = 0;
+			for (const char* begin = "Immunity:"; *begin != '\0'; begin++) {
+				buffer[i++] = *begin;
+			}
+			buffer[i] = '\0';
+			Surface immunity_text = CSM_font_array[(int)(TILE_SIZE / 4)].render_blended(buffer, Color::black);
+			X = edge;
+
+			rect.x = X;
+			rect.y = Y;
+			screen.blit(immunity_text, &rect, NULL, middle_left);
+
+			X = edge;
+			X += immunity_text->w;
+
+			iter_typing(type) {
+				if (typechart[type][displayed_type] == immune) {
+					rect.x = X;
+					rect.y = Y;
+					screen.blit(typing_icon[type].scale_by(mini_size, true), &rect, NULL, middle_left);
+
+					X += (int)(mini_size * TILE_SIZE);
+				}
+			}
+			Y += (int)(mini_size * TILE_SIZE);
+			any = false;
+		}
+		int nb = 0;
+		iter_typing(type) {
+			if (typechart[type][displayed_type] == not_very_effective) {
+				any = true;
+				nb++;
+			}
+		}
+		if (any) {
+			i = 0;
+			for (const char* begin = "Resistance:"; *begin != '\0'; begin++) {
+				buffer[i++] = *begin;
+			}
+			buffer[i] = '\0';
+			Surface text = CSM_font_array[(int)(TILE_SIZE / 4)].render_blended(buffer, Color::black);
+
+			X = edge;
+
+			rect.x = X;
+			rect.y = Y;
+			screen.blit(text, &rect, NULL, middle_left);
+
+			if (nb > 3) {
+				X = 2 * edge;
+				Y += (int)(mini_size * TILE_SIZE);
+			}
+			else {
+				X += text->w;
+			}
+			i = 0;
+			iter_typing(type) {
+				if (typechart[type][displayed_type] == not_very_effective) {
+					rect.x = X;
+					rect.y = Y;
+					screen.blit(typing_icon[type].scale_by(mini_size, true), &rect, NULL, middle_left);
+					X += (int)(mini_size * TILE_SIZE);
+					i++;
+					if (i >= 7 and i != nb) {
+						X = 2 * edge;
+						i = 0;
+						Y += (int)(mini_size * TILE_SIZE);
+					}
+				}
+			}
+			Y += (int)(mini_size * TILE_SIZE);
+			any = false;
+		}
+		
+		{
+			nb = 0;
+			iter_typing(type) {
+				if (typechart[type][displayed_type] == super_effective) {
+					nb++;
+				}
+			}
+
+			i = 0;
+			for (const char* begin = "Weakness:"; *begin != '\0'; begin++) {
+				buffer[i++] = *begin;
+			}
+			buffer[i] = '\0';
+			Surface text = CSM_font_array[(int)(TILE_SIZE / 4)].render_blended(buffer, Color::black);
+
+			X = edge;
+			rect.x = X;
+			rect.y = Y;
+			screen.blit(text, &rect, NULL, middle_left);
+
+			if (nb > 3) {
+				X = 2 * edge;
+				Y += (int)(mini_size * TILE_SIZE);
+
+			}
+			else {
+				X += text->w;
+			}
+
+			i = 0;
+			iter_typing(type) {
+				if (typechart[type][displayed_type] == super_effective) {
+					rect.x = X;
+					rect.y = Y;
+					screen.blit(typing_icon[type].scale_by(mini_size, true), &rect, NULL, middle_left);
+					X += (int)(mini_size * TILE_SIZE);
+					i++;
+					if (i >= 7 and i != nb) {
+						X = 2 * edge;
+						i = 0;
+						Y += (int)(mini_size * TILE_SIZE);
+					}
+				}
+			}
+			Y += (int)(mini_size * TILE_SIZE);
+
+		}
+
+		nb = 0;
+		iter_typing(type) {
+			if (typechart[displayed_type][type] == immune) {
+				any = true;
+			}
+		}
+		if (any) {
+			i = 0;
+			for (const char* begin = "Not effective:"; *begin != '\0'; begin++) {
+				buffer[i++] = *begin;
+			}
+			buffer[i] = '\0';
+			Surface text = CSM_font_array[(int)(TILE_SIZE / 4)].render_blended(buffer, Color::black);
+
+			X = edge;
+			rect.x = X;
+			rect.y = Y;
+			screen.blit(text, &rect, NULL, middle_left);
+
+			X += text->w;
+			
+
+			i = 0;
+			iter_typing(type) {
+				if (typechart[displayed_type][type] == immune) {
+					rect.x = X;
+					rect.y = Y;
+					screen.blit(typing_icon[type].scale_by(mini_size, true), &rect, NULL, middle_left);
+					X += (int)(mini_size * TILE_SIZE);
+					i++;
+				}
+			}
+			Y += (int)(mini_size * TILE_SIZE);
+		}
+
+		nb = 0;
+		iter_typing(type) {
+			if (typechart[displayed_type][type] == not_very_effective) {
+				any = true;
+				nb++;
+			}
+		}
+
+		if (any) {
+			i = 0;
+			for (const char* begin = "Resisted:"; *begin != '\0'; begin++) {
+				buffer[i++] = *begin;
+			}
+			buffer[i] = '\0';
+			Surface weakness_text = CSM_font_array[(int)(TILE_SIZE / 4)].render_blended(buffer, Color::black);
+
+			X = edge;
+			rect.x = X;
+			rect.y = Y;
+			screen.blit(weakness_text, &rect, NULL, middle_left);
+
+			if (nb > 4) {
+				X = 2*edge;
+				Y += (int)(mini_size * TILE_SIZE);
+			}
+			else {
+				X += weakness_text->w;
+			}
+
+			i = 0;
+			iter_typing(type) {
+				if (typechart[displayed_type][type] == not_very_effective) {
+					rect.x = X;
+					rect.y = Y;
+					screen.blit(typing_icon[type].scale_by(mini_size, true), &rect, NULL, middle_left);
+					X += (int)(mini_size * TILE_SIZE);
+					i++;
+					if (i >= 7 and i != nb) {
+						X = 2 * edge;
+						i = 0;
+						Y += (int)(mini_size * TILE_SIZE);
+					}
+				}
+			}
+			Y += (int)(mini_size * TILE_SIZE);
+			any = false;
+		}
+
+		nb = 0;
+		iter_typing(type) {
+			if (typechart[displayed_type][type] == super_effective) {
+				any = true;
+				nb++;
+			}
+		}
+		if (any) {
+			i = 0;
+			for (const char* begin = "Super effective:"; *begin != '\0'; begin++) {
+				buffer[i++] = *begin;
+			}
+			buffer[i] = '\0';
+			Surface text = CSM_font_array[(int)(TILE_SIZE / 4)].render_blended(buffer, Color::black);
+
+			X = edge;
+			rect.x = X;
+			rect.y = Y;
+			screen.blit(text, &rect, NULL, middle_left);
+
+			if (nb > 1) {
+				X = 2 * edge;
+				Y += (int)(mini_size * TILE_SIZE);
+			}
+			else {
+				X += text->w;
+			}
+
+			i = 0;
+			iter_typing(type) {
+				if (typechart[displayed_type][type] == super_effective) {
+					rect.x = X;
+					rect.y = Y;
+					screen.blit(typing_icon[type].scale_by(mini_size, true), &rect, NULL, middle_left);
+					X += (int)(mini_size * TILE_SIZE);
+					i++;
+					if (i >= 7 and i != nb) {
+						X = 2 * edge;
+						i = 0;
+						Y += (int)(mini_size * TILE_SIZE);
+					}
+				}
+			}
+			Y += (int)(mini_size * TILE_SIZE);
+		}
+	}
+	else if (displayed_piece != NULL) {
+		if (displayed_page == 0) {
+			SDL_Rect rect;
+			int Y = 0.4 * TILE_SIZE;
+			int X = w * TILE_SIZE / 2;
+			rect.x = X;
+			rect.y = Y;
+
+			screen.blit(CSM_font_array[(int)(TILE_SIZE / 2)].render_blended(displayed_piece->name, Color::black), &rect, NULL, top_middle);
+			
+			Y += 3 * TILE_SIZE / 4;
+			rect.x = X;
+			rect.y = Y;
+			screen.blit(displayed_piece->sprite, &rect, NULL, top_middle);
+			
+			X = edge;
+			Y += 5 * TILE_SIZE / 4;
+
+			if (displayed_piece->type != typeless) {
+				char buffer[64] = "Type: ";
+				int i = 6;
+				for (const char* begin = type_str[(int)language][displayed_piece->type]; *begin != '\0'; begin++) {
+					buffer[i++] = *begin;
+				}
+
+				buffer[i] = '\0';
+				Surface text = CSM_font_array[(int)(TILE_SIZE / 3)].render_blended(buffer, Color::black);
+
+				rect.x = X;
+				rect.y = Y;
+				screen.blit(text, &rect, NULL, middle_left);
+
+			}
+		}
+		else if (displayed_page == 1) {
+			displayed_type = displayed_piece->type;
+			re_draw();
+			displayed_type = typeless;
+		}
+		else if (displayed_page == 2) {
+			if (displayed_piece->item != NULL) {
+				displayed_item = &displayed_piece->item->cls;
+				re_draw();
+				displayed_item = NULL;
+			}
+		}
+
+	}
+}
+
+bool InformationDisplay::is_active() {
+	return game.show_phone;
+}
+
+Button::update_return_code InformationDisplay::update() {
+	return Button::nothing;
+}
+
+
+ToggleInformationDisplay::ToggleInformationDisplay(double _x, double _y) : Button(_x, _y, 1, 1) {
+	;
+}
+
+void ToggleInformationDisplay::draw() {
+	game.draw(rotom_dex, x, y);
+}
+
+bool ToggleInformationDisplay::is_active() {
+	return game.state != in_settings;
+}
+
+void ToggleInformationDisplay::effect(int, double, double) {
+	game.show_phone = not game.show_phone;
+	game.phone_displayed_item = NULL;
+	game.phone_displayed_piece = NULL;
+	game.phone_displayed_type = typeless;
+}
+
+PhoneSwitchPage::PhoneSwitchPage(double x, double y, bool r) : Button(x-0.5, y-0.5, 1, 1) {
+	is_right = r;
+}
+
+bool PhoneSwitchPage::is_active() {
+	if (game.phone_displayed_piece == NULL or not game.show_phone) {
+		return false;
+	}
+	if (is_right) {
+		return (game.phone_displayed_page - (game.phone_displayed_piece->item != NULL)) <= 1;
+	}
+	else {
+		return game.phone_displayed_page > 0;
+	}
+}
+
+void PhoneSwitchPage::draw() {
+	if (not is_right) {
+		right_arrow.v_flip_inplace();
+		game.draw(right_arrow, x, y);
+		right_arrow.v_flip_inplace();
+	}
+	else {
+		game.draw(right_arrow, x, y);
+	}
+}
+
+void PhoneSwitchPage::effect(int, double, double) {
+	if (is_right) {
+		PRINT_DEBUG("tourte 43")
+		game.phone_displayed_page++;
+	}
+	else {
+		game.phone_displayed_piece--;
 	}
 }

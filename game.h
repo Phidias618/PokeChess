@@ -48,8 +48,8 @@ public:
 	Color bg_color;
 
 	Uint32 mouse_state;
-	float mouse_x;
-	float mouse_y;
+	double mouse_x;
+	double mouse_y;
 
 	State state;
 	ButtonCollection* global_buttons; // buttons for all or almost all state, they are loaded once at the begining of the game and never unloaded
@@ -77,6 +77,12 @@ public:
 		Piece* selected_piece; // data for the state in_game
 	};
 
+	bool show_phone;
+	ItemClass* phone_displayed_item;
+	Piece* phone_displayed_piece;
+	typing phone_displayed_type;
+	int phone_displayed_page;
+
 	State previous_state; // use to exit the settings
 	ButtonCollection* previous_buttons; // use to exit the settings
 
@@ -87,7 +93,6 @@ public:
 	Board& board;
 
 	Piece* promoting_piece;
-
 	piece_color winner;
 
 	// some bool that sets the gamerules
@@ -100,7 +105,7 @@ public:
 	bool with_sounds;
 	short music_volume;
 
-	bool in_check;
+	// bool in_check;
 
 	bool show_type_chart;
 

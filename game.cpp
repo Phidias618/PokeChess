@@ -19,6 +19,11 @@ bool infinitely = false;
 
 Game::Game() : board(*new Board()) {
 	language = LANGUAGE::ENGLISH;
+
+	show_phone = false;
+	phone_displayed_item = NULL;
+	phone_displayed_piece = NULL;
+
 	Mix_ReserveChannels(4);
 	scaling_factor = 1.0;
 	with_sounds = true;
@@ -39,6 +44,10 @@ Game::Game() : board(*new Board()) {
 	global_buttons->add(new TypechartDisplay());
 	global_buttons->add(new ExitGameButton(17.0, 0.0));
 	global_buttons->add(new SettingsButton(0.0, 0.0));
+	global_buttons->add(new ToggleInformationDisplay(2.0, 0.0));
+	global_buttons->add(new InformationDisplay(2.5, 5.5));
+	global_buttons->add(new PhoneSwitchPage(0, 5.5, false));
+	global_buttons->add(new PhoneSwitchPage(4.5, 5.5, true));
 
 	buttons = new ButtonCollection();
 
@@ -67,13 +76,13 @@ Game::Game() : board(*new Board()) {
 	winner = no_color;
 
 	selected_thing_sprite_x_offset = selected_thing_sprite_y_offset = 0;
-	mouse_x = mouse_y = 0;
-
-	in_check = false;
+	mouse_x = mouse_y = 0.0;
 }
 
 void Game::reset() {
-	
+	show_phone = false;
+	phone_displayed_item = NULL;
+	phone_displayed_piece = NULL;
 	is_holding_something = false;
 	show_type_chart = false;
 
@@ -90,8 +99,6 @@ void Game::reset() {
 	is_type_avaible = 0xFFFFFFFF;
 
 	with_check = true;
-
-	in_check = false;
 
 	TextBoxDisplay::clear();
 
@@ -115,12 +122,10 @@ void Game::resize_drawing_board(int new_tile_size) {
 
 void Game::select_piece(Piece* piece) {
 	selected_piece = piece;
-	piece->square->update_graphic();
 
 	for (Square& square : board) {
 		if (piece->can_move_to(square)) {
 			square.is_accessible = true;
-			square.update_graphic();
 		}
 	}
 }
@@ -131,17 +136,17 @@ void Game::unselect_piece() {
 	int x = selected_piece->x; int y = selected_piece->y;
 	selected_piece = NULL;
 	is_holding_something = false;
-	board[x][y].update_graphic();
 
 	for (Square& square : board) {
 		if (square.is_accessible) {
 			square.is_accessible = false;
-			square.update_graphic();
 		}
 	}
 }
 
 void Game::draw(Surface surf, double x, double y, anchor c) {
+	if (surf == NULL)
+		return;
 	SDL_Rect rect;
 	rect.x = (int)(x * TILE_SIZE) - (surf->w * (c & 0b11)) / 2;
 	rect.y = (int)(y * TILE_SIZE) - (surf->h * (c >> 2)) / 2;
@@ -176,22 +181,28 @@ void Game::move_selected_piece_to(Square& square) {
 
 	Square* temp = board.last_move_begin_square;
 	board.last_move_begin_square = begin_square;
-	if (temp != NULL)
-		temp->update_graphic();
-	board.last_move_begin_square->update_graphic();
 
 	temp = board.last_move_end_square;
 	board.last_move_end_square = selected_piece->square;
-	if (temp != NULL)
-		temp->update_graphic();
-	board.last_move_end_square->update_graphic();
 
 	unselect_piece();
 
 	if (not board.last_move_data.interrupt_move)
 		resume_move();
 
-	if (board.last_move_data.promotion)
+	if (board.nb_of_kings[white] == 0 and board.nb_of_kings[black] == 0) {
+		winner = no_color;
+		to_end_of_game();
+	}
+	else if (board.nb_of_kings[white] == 0) {
+		winner = black;
+		to_end_of_game();
+	}
+	else if (board.nb_of_kings[black] == 0) {
+		winner = white;
+		to_end_of_game();
+	}
+	else if (board.last_move_data.promotion)
 		to_promotion(board.last_move_data.attacker);
 
 }
@@ -214,14 +225,20 @@ void Game::resume_move() {
 		if (data.en_passant)
 			add_textbox("Pawn uses\nEn passant");
 
-		bool is_in_check = board.kings[player]->is_in_check();
+		bool is_in_check = false;
+		for (King* king : board.king_list[board.active_player]) {
+			if (king->is_in_check()) {
+				is_in_check = true;
+				break;
+			}
+		}
 		bool escaped_check = board.last_move_data.escaped_check;
 
 		if (data.castling) {
 			add_textbox("King uses castle");
 			if (not escaped_check and not is_in_check) {
 				add_textbox("That raises his\ndefense");
-				buttons->add(new StatBoostDisplay(board.kings[player], pokestat::defense, TextBoxDisplay::duration, +1));
+				buttons->add(new StatBoostDisplay(data.attacker, pokestat::defense, TextBoxDisplay::duration, +1));
 			}
 		}
 
@@ -249,6 +266,15 @@ void Game::resume_move() {
 		}
 	}
 
+	/*
+	if (data.defender != NULL and data.defender->item != NULL and (data.attacker->item == NULL or data.attacker->item->id != item_id::protective_pads)) {
+		data.defender->item->revenge(data);
+	}
+
+	if (data.attacker->item != NULL and (data.defender == NULL or data.defender->item == NULL or data.defender->item->id != item_id::safety_googles)) {
+		data.attacker->item->after_move_effects(data);
+	}
+	*/
 
 	if (data.move_again) {
 		board.in_bonus_move = true;
@@ -256,9 +282,13 @@ void Game::resume_move() {
 		if (with_typing) {
 			if (data.was_in_check)
 				resume_background();
-			if (board.kings[board.active_player]->is_in_check()) {
-				interupt_background(check_music, -1);
-			}
+			else if (current_music != check_music)
+				for (King* king : board.king_list[board.active_player]) {
+					if (king->is_in_check()) {
+						interupt_background(check_music, -1);
+						break;
+					}
+				}
 		}
 	}
 	else {
@@ -280,6 +310,8 @@ void Game::resume_move() {
 		to_end_of_game();
 		winner = white;
 	}
+	board.turn_number++;
+	board.move_historic.push_front(data);
 }
 
 void Game::change_turn() {
@@ -289,8 +321,13 @@ void Game::change_turn() {
 	if (with_typing) {
 		if (data.was_in_check)
 			resume_background();
-		if (board.kings[board.active_player]->is_in_check()) {
-			interupt_background(check_music, -1);
+		else if (current_music != check_music) {
+			for (King* king : board.king_list[board.active_player]) {
+				if (king->is_in_check()) {
+					interupt_background(check_music, -1);
+					break;
+				}
+			}
 		}
 	}
 
@@ -300,12 +337,13 @@ void Game::change_turn() {
 void Game::check_for_end_of_game() {
 	if (with_check and board.in_stalemate(board.active_player)) {
 		to_end_of_game();
-		if (board.kings[board.active_player]->is_in_check()) {
-			// checkmate congratulations
-			winner = not board.active_player;
-		}
-		else {
-			winner = no_color;
+		winner = no_color;
+		for (King* king : board.king_list[board.active_player]) {
+			if (king->is_in_check()) {
+				// checkmate congratulations
+				winner = not board.active_player;
+				break;
+			}
 		}
 	}
 }
@@ -331,8 +369,16 @@ void Game::to_menu() {
 
 void Game::to_selection() {
 	state = in_selection;
+	show_phone = true;
+	phone_displayed_item = NULL;
+	phone_displayed_piece = NULL;
+	phone_displayed_type = typeless;
+
 	buttons->clear();
-	buttons->add(new TypingSelectionButton(14.0, 3.0));
+	iter_typing(type) {
+		buttons->add(new TypingSelectionButton(14.0 + (type % 3), 3.0 + (type / 3), type));
+	}
+	
 	buttons->add(new SwitchSelectionButton(14.0, 1.5));
 	double x = 14.0;
 	double y = 2.5;
@@ -348,16 +394,16 @@ void Game::to_selection() {
 			buttons->add(new ItemSelectionButton(x, y, Item));
 
 		space:
-		i++;
-		if (i == 6) {
+			i++;
+			if (i == 6) {
 			newline:
-			i = 0;
-			x = 14.0;
-			y += 0.5;
-		}
-		else {
-			x += 0.5;
-		}
+				i = 0;
+				x = 14.0;
+				y += 0.5;
+			}
+			else {
+				x += 0.5;
+			}
 		}
 	}
 
@@ -378,6 +424,7 @@ void Game::to_game(bool resume) {
 	buttons->add(new SkipBonusMoveButton(9.0, 1.0));
 
 	selected_piece = NULL;
+	show_phone = false;
 
 	std::random_device rd;
 
@@ -402,10 +449,7 @@ void Game::to_end_of_game() {
 	buttons->add(new EndOfGameButton());
 
 	for (Square& square : board) {
-		if (square.is_accessible) {
-			square.is_accessible = false;
-			square.update_graphic();
-		}
+		square.is_accessible = false;
 	}
 }
 
@@ -444,6 +488,9 @@ void Game::to_promotion(Piece* promoting_pawn) {
 	
 	state = in_promotion;
 
+	if (with_typing)
+		interupt_background(promotion_music, -1);
+
 	buttons->clear();
 	if (promoting_pawn->item == NULL or not promoting_pawn->item->prepare_promotion()) {
 		buttons->add(new PromotionButton(Queen::cls, 7.0, 5.5));
@@ -452,8 +499,7 @@ void Game::to_promotion(Piece* promoting_pawn) {
 		buttons->add(new PromotionButton(Knight::cls, 10.0, 5.5));
 	}
 
-	if (with_typing)
-		interupt_background(promotion_music, -1);
+	
 }
 
 void Game::play_background(Mix_Music* music, int loop) {
@@ -499,7 +545,6 @@ void Game::resume_background() {
 			if (interupted_music->infinitely)
 				Mix_HookMusicFinished(NULL);
 			else {
-				PRINT_DEBUG("bonjoir");
 				Mix_HookMusicFinished(resume_background);
 			}
 		}

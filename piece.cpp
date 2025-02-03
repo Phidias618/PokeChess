@@ -70,37 +70,46 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 	double crit_rate = board.crit_rate;
 	double miss_rate = board.miss_rate;
 
-	if (attacker->item != NULL) {
-		if (defender->item != NULL) {
+	if (attacker->item != NULL and (defender->item == NULL or defender->item->id != item_id::safety_googles)) {
+		if (defender->item != NULL and (attacker->item == NULL or attacker->item->id != item_id::protective_pads)) {
 			if (attacker->item->priority >= defender->item->priority) {
 				attacker->item->attack_modifier(matchup, defender);
 				defender->item->defense_modifier(matchup, attacker);
 
-				attacker->item->crit_modifier(crit_rate, defender, matchup);
+				if (attacker->item != NULL)
+					attacker->item->crit_modifier(crit_rate, defender, matchup);
 				
-				attacker->item->accuracy_modifier(miss_rate, defender, matchup);
-				defender->item->evasion_modifier(miss_rate, attacker, matchup);
+				if (attacker->item != NULL)
+					attacker->item->accuracy_modifier(miss_rate, defender, matchup);
+				if (defender->item != NULL)
+					defender->item->evasion_modifier(miss_rate, attacker, matchup);
 			}
 			else {
 				defender->item->defense_modifier(matchup, attacker);
 				attacker->item->attack_modifier(matchup, defender);
 				
-				attacker->item->crit_modifier(crit_rate, defender, matchup);
+				if (attacker->item != NULL)
+					attacker->item->crit_modifier(crit_rate, defender, matchup);
 
-				defender->item->evasion_modifier(miss_rate, attacker, matchup);
-				attacker->item->accuracy_modifier(miss_rate, defender, matchup);
+				if (defender->item != NULL)
+					defender->item->evasion_modifier(miss_rate, attacker, matchup);
+				if (attacker->item != NULL)
+					attacker->item->accuracy_modifier(miss_rate, defender, matchup);
 			}
 		}
 		else {
 			attacker->item->attack_modifier(matchup, defender);
-			attacker->item->crit_modifier(crit_rate, defender, matchup);
-			attacker->item->accuracy_modifier(miss_rate, defender, matchup);
+			if (attacker->item != NULL)
+				attacker->item->crit_modifier(crit_rate, defender, matchup);
+			if (attacker->item != NULL)
+				attacker->item->accuracy_modifier(miss_rate, defender, matchup);
 		}
 	}
 	else {
-		if (defender->item != NULL) {
+		if (defender->item != NULL and (attacker->item == NULL or attacker->item->id != item_id::protective_pads)) {
 			defender->item->defense_modifier(matchup, attacker);
-			defender->item->evasion_modifier(miss_rate, attacker, matchup);
+			if (defender->item != NULL)
+				defender->item->evasion_modifier(miss_rate, attacker, matchup);
 		}
 	}
 
@@ -150,11 +159,11 @@ PieceClass& PieceClass::operator=(const PieceClass& other) {
 }
 
 
-bool PieceClass::operator==(void* other) {
+bool PieceClass::operator==(void* other) const {
 	return constructor == NULL;
 }
 
-bool operator==(void* other, PieceClass& const Class) {
+bool operator==(void* other, PieceClass const Class) {
 	return Class.operator==(NULL);
 }
 
@@ -202,8 +211,8 @@ void Piece::update_sprite() {
 		sprite.blit(typing_icon[type].scale_to(TILE_SIZE / 3, TILE_SIZE / 3, true), &dest, NULL);
 
 	if (item != NULL) {
-		dest = { 0, TILE_SIZE / 2, ITEM_SIZE, ITEM_SIZE };
-		(item->cls).draw(sprite, &dest, top_left);
+		dest = { 0, TILE_SIZE - ITEM_MINI_SIZE, 0, 0 };
+		(item->cls).draw(sprite, &dest, mini);
 	}
 }
 
@@ -236,7 +245,13 @@ bool Piece::base_can_move_to(Square& target_square) {
 			target_square.piece = this;
 			square = &target_square;
 
-			bool in_check = board.kings[color]->is_in_check();
+			bool in_check = false;
+			for (King* king : board.king_list[color]) {
+				if (king->is_in_check()) {
+					in_check = true;
+					break;
+				}
+			}
 			// cancel the simulated move
 			square = temp;
 			square->piece = this;
@@ -255,16 +270,42 @@ bool Piece::base_can_move_to(Square& target_square) {
 
 bool Piece::base_do_control(Square& target_square) { return false; }
 
-move_data Piece::move_to(Square& target_square) {
+move_data Piece::move_to(Square& square) {
+	
+	
+	move_data data = base_move_to(square);
+
+	if (item != NULL and (data.defender == NULL or data.defender->item == NULL or data.defender->item->id != item_id::safety_googles)) {
+		PRINT_DEBUG("effet");
+		item->after_move_effects(data);
+	}
+
+	PRINT_DEBUG("3443")
+	if ((data.defender != NULL and data.defender->item != NULL) and (item == NULL or item->id != item_id::protective_pads)) {
+		PRINT_DEBUG("revenge");
+		data.defender->item->revenge(data);
+	}
+
+	return data;
+}
+
+
+move_data Piece::base_move_to(Square& target_square) {
 	move_data data;
 	data.set_type_matchup_data(this, target_square.piece, &target_square);
-	data.was_in_check = board.kings[color]->is_in_check();
-
+	data.was_in_check = false;
+	for (King* king : board.king_list[color]) {
+		if (king->is_in_check()) {
+			data.was_in_check = true;
+			break;
+		}
+	}
 
 	if (data.cancel)
 		;
 	else {
 		has_already_move = true;
+
 		target_square.to_graveyard(); // kills the opposing piece
 
 		if (data.suicide) {
@@ -274,32 +315,63 @@ move_data Piece::move_to(Square& target_square) {
 		else {
 			square->piece = NULL; // removes itself from its previous location
 			target_square.piece = this; // moves itself to its new location
-			square->update_graphic(); // updates visual data of the square the piece was at the begining of the turn
 			square = &target_square; // change its current square
-			square->update_graphic(); // updates visual data of the square the piece is at the end of the turn
 		}
 	}
-	data.escaped_check = (data.was_in_check and not board.kings[color]->is_in_check());
+
+	bool is_in_check = false;
+	for (King* king : board.king_list[color]) {
+		if (king->is_in_check()) {
+			is_in_check = true;
+			break;
+		}
+	}
+	data.escaped_check = (data.was_in_check and not is_in_check);
 
 	return data;
 }
 
 bool Piece::can_move_to(Square& target) {
-	bool base = base_can_move_to(target);
 #define have_honey(piece) ((piece) != NULL and (piece)->color != color and (piece)->item != NULL and (piece)->item->id == item_id::honey)
 	Piece* adv = target.piece;
-	if (type == bug and (item == NULL or item->id != item_id::safety_googles) and not have_honey(adv)) {
+	static bool check_for_honey = true;
+
+	if (check_for_honey and type == bug and (item == NULL or item->id != item_id::safety_googles) and not have_honey(adv)) {
 		for (Square& square : board) {
-			if (base_can_move_to(square) or (item != NULL and item->is_move_allowed(square))) {
+			check_for_honey = false;
+			if (can_move_to(square) or (item != NULL and item->is_move_allowed(square))) {
 				if (have_honey(square.piece)) {
 					// congratulation, you are a bug type that can reach opposing honey
+					check_for_honey = true;
 					return false;
 				}
 			}
+			check_for_honey = true;
 		}
 	}
-	PRINT_VAR(base);
-	return (base and (item == NULL or not item->is_move_disallowed(target))) or (not base and item != NULL and item->is_move_allowed(target));
+	bool base = base_can_move_to(target);
+
+	static bool check_for_is_move_disallowed = true;
+	static bool check_for_is_move_allowed = true;
+
+	if (item != NULL) {
+		if (base) {
+			if (check_for_is_move_disallowed) {
+				check_for_is_move_disallowed = false;
+				base = not item->is_move_disallowed(target);
+				check_for_is_move_disallowed = true;
+			}
+		}
+		else {
+			if (check_for_is_move_allowed) {
+				check_for_is_move_allowed = false;
+				base = item->is_move_allowed(target);
+				check_for_is_move_allowed = true;
+			}
+		}
+	}
+
+	return base;
 }
 
 bool Piece::do_control(Square& target) {
@@ -318,12 +390,15 @@ Piece::~Piece() {
 King::King(Board& board_, piece_color color, Square* sq, typing type_, PokeItem* item) : Piece(board_, King::cls.id, color, sq, type_, item) {
 	//board.kings[color] = this;
 	board.nb_of_kings[color]++;
+	board.king_list[color].push_front(this);
 	name = King_str;
 }
 
 King::~King() {
-	if (not is_in_graveyard)
+	if (not is_in_graveyard) {
 		board.nb_of_kings[color]--;
+		board.king_list[color].remove(this);
+	}
 }
 
 auto King::base_can_move_to(Square& target) -> bool {
@@ -341,7 +416,7 @@ auto King::base_can_move_to(Square& target) -> bool {
 	}
 }
 
-auto King::move_to(Square& target_square) -> move_data {
+auto King::base_move_to(Square& target_square) -> move_data {
 	if (can_castle(target_square)) {
 		move_data data;
 		data.set_type_matchup_data(this, NULL, &target_square);
@@ -359,7 +434,7 @@ auto King::move_to(Square& target_square) -> move_data {
 		return data;
 	}
 	else
-		return Piece::move_to(target_square);
+		return Piece::base_move_to(target_square);
 }
 
 auto King::base_do_control(Square& target_square) -> bool {
@@ -442,7 +517,14 @@ auto Pawn::can_en_passant(Square& target_square, bool base_rule) -> bool {
 		square = &target_square;
 		board.last_move_end_square->piece = NULL;
 
-		bool in_check = board.kings[color]->is_in_check();
+		bool in_check = false;
+		for (King* king : board.king_list[board.active_player]) {
+			if (king->is_in_check()) {
+				in_check = true;
+				break;
+			}
+		}
+
 		// cancel the simulated move
 		square = begin_pos;
 		square->piece = this;
@@ -457,10 +539,16 @@ auto Pawn::can_en_passant(Square& target_square, bool base_rule) -> bool {
 		
 }
 
-auto Pawn::move_to(Square& target_square) -> move_data {
+auto Pawn::base_move_to(Square& target_square) -> move_data {
 	move_data data;
 
-	data.was_in_check = board.kings[color]->is_in_check();
+	data.was_in_check = false;
+	for (King* king : board.king_list[board.active_player]) {
+		if (king->is_in_check()) {
+			data.was_in_check = true;
+			break;
+		}
+	}
 
 	if (can_en_passant(target_square)) {
 		data.en_passant = true;
@@ -475,20 +563,28 @@ auto Pawn::move_to(Square& target_square) -> move_data {
 				square->remove();
 				target_square.piece = this;
 				square = &target_square;
-				square->update_graphic();
 			}
 		}
 		
 	}
 	else {
-		data = Piece::move_to(target_square);
+		data = Piece::base_move_to(target_square);
 	}
 
 	if ((color == white and y == 7) or (color == black and y == 0)) {
 		if (not data.suicide)
 			data.promotion = data.interrupt_move = true;
 	}
-	data.escaped_check = data.was_in_check and not board.kings[color]->is_in_check();
+
+	bool is_in_check = false;
+	for (King* king : board.king_list[board.active_player]) {
+		if (king->is_in_check()) {
+			is_in_check = true;
+			break;
+		}
+	}
+
+	data.escaped_check = data.was_in_check and not is_in_check;
 	return data;
 }
 
@@ -659,18 +755,15 @@ auto King::castle(Square& target_square) -> void { // assume King::can_castle(ta
 	square->remove(); // removes the king from its previous position
 	board[x + 2 * x_step][y].piece = this; // moves the king to the corresponding square
 	square = &board[x + 2 * x_step][y];// updates the king position
-	square->update_graphic();
 
 	rook->square->remove(); // removes the rook from it's previous position
 	board[x - x_step][y].piece = rook; // moves the rook to the corresponding square
 	rook->square = &board[x - x_step][y]; // updates the position of the rook
-	board[rook->x][rook->y].update_graphic();
 	
 	has_already_move = true;
 	rook->has_already_move = true;
 }
 
 bool King::is_in_check(bool base_rule) {
-	return false;
 	return square->is_controlled_by(not color);
 }

@@ -1,14 +1,27 @@
 #pragma once
 
 extern int TILE_SIZE;
-extern int ITEM_SIZE;
+extern int ITEM_SIZE, ITEM_MINI_SIZE, ITEM_MEGA_SIZE;
 
 #include "SDL+.h"
 
 void* load_all_sprites(int tile_size);
 
 extern Surface sprite_sheet;
+
+enum size {
+	mega,
+	regular,
+	mini,
+};
+
+extern Surface item_sheet_mega;
 extern Surface item_sheet;
+extern Surface item_sheet_mini;
+extern Surface phone_frame;
+extern Surface rotom_dex;
+
+extern Surface right_arrow;
 
 //extern Surface check_mark;
 //extern Surface exit_cross;
