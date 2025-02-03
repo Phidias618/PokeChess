@@ -1,0 +1,12 @@
+﻿  Analyse des sources à la recherche des dépendances de module...
+  Button.cpp
+C:\Users\Eliott\source\repos\PokeChess\Button.cpp(346,18): warning C4244: 'initialisation' : conversion de 'double' en 'int', perte possible de données
+C:\Users\Eliott\source\repos\PokeChess\Button.cpp(346,33): warning C4244: 'initialisation' : conversion de 'double' en 'int', perte possible de données
+C:\Users\Eliott\source\repos\PokeChess\Button.cpp(732,153): warning C4244: 'argument' : conversion de 'double' en 'Uint8', perte possible de données
+C:\Users\Eliott\source\repos\PokeChess\Button.cpp(732,120): warning C4244: 'argument' : conversion de 'double' en 'Uint8', perte possible de données
+C:\Users\Eliott\source\repos\PokeChess\Button.cpp(732,87): warning C4244: 'argument' : conversion de 'double' en 'Uint8', perte possible de données
+C:\Users\Eliott\source\repos\PokeChess\Button.cpp(960,26): warning C4244: '=' : conversion de 'double' en 'short', perte possible de données
+C:\Users\Eliott\source\repos\PokeChess\Button.cpp(1133,28): warning C4244: 'initialisation' : conversion de 'double' en 'int', perte possible de données
+C:\Users\Eliott\source\repos\PokeChess\Button.cpp(1133,51): warning C4244: 'initialisation' : conversion de 'double' en 'int', perte possible de données
+C:\Users\Eliott\source\repos\PokeChess\Button.cpp(1135,130): warning C4244: 'argument' : conversion de 'double' en 'Uint32', perte possible de données
+  PokeChess.vcxproj -> C:\Users\Eliott\source\repos\PokeChess\x64\Debug\PokeChess.exe

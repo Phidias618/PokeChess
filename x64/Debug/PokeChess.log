@@ -1,0 +1,10 @@
+﻿  board.cpp
+C:\Users\Eliott\source\repos\PokeChess\SDL+.h(7,10): fatal  error C1083: Impossible d'ouvrir le fichier include : 'SDL.h' : No such file or directory
+  game.cpp
+C:\Users\Eliott\source\repos\PokeChess\SDL+.h(7,10): fatal  error C1083: Impossible d'ouvrir le fichier include : 'SDL.h' : No such file or directory
+  main.cpp
+C:\Users\Eliott\source\repos\PokeChess\main.cpp(1,10): fatal  error C1083: Impossible d'ouvrir le fichier include : 'SDL.h' : No such file or directory
+  piece.cpp
+C:\Users\Eliott\source\repos\PokeChess\SDL+.h(7,10): fatal  error C1083: Impossible d'ouvrir le fichier include : 'SDL.h' : No such file or directory
+  poketyping.cpp
+  Génération de code en cours...
