@@ -277,6 +277,7 @@ void loop() {
 	if (TPF_ms > SDL_GetTicks() - start_time)
 		SDL_Delay((int)(TPF_ms + start_time - SDL_GetTicks()));
 
+	PRINT_DEBUG("hello world\n");
 
 	if (Button::pressed_button != NULL) {
 		char title[100] = "";
