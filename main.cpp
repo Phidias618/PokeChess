@@ -1,7 +1,7 @@
 #include <SDL.h>
 #include <iostream>
 #include <string>
-
+#define private public
 #include "SDL+.h"
 #include "Debugger.h"
 
@@ -105,8 +105,8 @@ auto draw_frame() -> void {
 
 
 	if (game.is_holding_something and game.selected_thing_sprite != NULL) {
-		dest_rect.x = (int)game.mouse_x - game.corner_x;
-		dest_rect.y = (int)game.mouse_y - game.corner_y;
+		dest_rect.x = (int)(game.mouse_x * TILE_SIZE);
+		dest_rect.y = (int)(game.mouse_y * TILE_SIZE);
 		dest_rect.x -= (int)(TILE_SIZE * game.selected_thing_sprite_x_offset);
 		dest_rect.y -= (int)(TILE_SIZE * game.selected_thing_sprite_y_offset);
 		game.drawing_board.blit(game.selected_thing_sprite, &dest_rect, NULL);
@@ -193,7 +193,6 @@ void handle_event(SDL_Event e) {
 							for (Square& square : game.board) {
 								if (selected_square.piece->base_do_control(square)) {
 									square.is_accessible = true;
-									square.update_graphic();
 								}
 							}
 						}
@@ -223,7 +222,6 @@ void handle_event(SDL_Event e) {
 			game.is_holding_something = false;
 			if (game.state == in_game) {
 				game.selected_piece = NULL;
-				game.board[game.selected_piece->x][game.selected_piece->y].update_graphic();
 			}
 			else if (game.state == in_selection) {
 				if (game.type_selection and game.selected_type != typeless) {
@@ -253,15 +251,16 @@ int counter = 0;
 void loop() {
 	Uint64 start_time = SDL_GetTicks();
 	
-	auto mouse_state = SDL_GetMouseState(&game.mouse_x, &game.mouse_y);
+	float x, y;
+	auto mouse_state = SDL_GetMouseState(&x, &y);
+	get_drawing_board_coordinates(x, y, &game.mouse_x, &game.mouse_y);
 
 	while (SDL_PollEvent(&event)) {
 		handle_event(event);
 	}
-	PRINT_VAR(Button::pressed_button);
+
 	if (Button::pressed_button != NULL) {
-		double x, y;
-		get_drawing_board_coordinates(game.mouse_x, game.mouse_y, &x, &y);
+		
 		Button::pressed_button->hold(Button::pressed_button_mouse_button, x - Button::pressed_button->x, y - Button::pressed_button->y);
 	}
 	Uint64 time2 = SDL_GetTicks();
@@ -279,13 +278,15 @@ void loop() {
 		SDL_Delay((int)(TPF_ms + start_time - SDL_GetTicks()));
 
 
-	char title[100] = "";
-	strcat_s(title, "(");
-	strcat_s(title, std::to_string(game.screen->w).c_str());
-	strcat_s(title, ", ");
-	strcat_s(title, std::to_string(game.screen->h).c_str());
-	strcat_s(title, ") ");
-	strcat_s(title, std::to_string(1000 / (SDL_GetTicks() - start_time)).c_str());
+	if (Button::pressed_button != NULL) {
+		char title[100] = "";
+		strcat_s(title, "(");
+		strcat_s(title, std::to_string(game.screen->w).c_str());
+		strcat_s(title, ", ");
+		strcat_s(title, std::to_string(game.screen->h).c_str());
+		strcat_s(title, ") ");
+		strcat_s(title, std::to_string(1000 / (SDL_GetTicks() - start_time)).c_str());
 
-	game.window.set_title(title);
+		game.window.set_title(title);
+	}
 }
