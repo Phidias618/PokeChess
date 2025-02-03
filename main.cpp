@@ -261,7 +261,7 @@ void loop() {
 
 	if (Button::pressed_button != NULL) {
 		
-		Button::pressed_button->hold(Button::pressed_button_mouse_button, x - Button::pressed_button->x, y - Button::pressed_button->y);
+		Button::pressed_button->hold(Button::pressed_button_mouse_button, game.mouse_x - Button::pressed_button->x, game.mouse_y - Button::pressed_button->y);
 	}
 	Uint64 time2 = SDL_GetTicks();
 

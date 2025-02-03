@@ -976,6 +976,7 @@ double clamp(double x, double min, double max) {
 }
 
 void VolumeSlider::hold(int mouse_button, double x_, double) {
+	PRINT_VAR(x_);
 	game.music_volume = 128 * (clamp(x_-2.25, 0.0, 2.5) / 2.5);
 	if (game.with_sounds) {
 		Mix_VolumeMusic(game.music_volume);
