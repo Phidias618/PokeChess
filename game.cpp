@@ -238,7 +238,7 @@ void Game::resume_move() {
 			add_textbox("King uses castle");
 			if (not escaped_check and not is_in_check) {
 				add_textbox("That raises his\ndefense");
-				buttons->add(new StatBoostDisplay(data.attacker, pokestat::defense, TextBoxDisplay::duration, +1));
+				global_buttons->add(new StatBoostDisplay(data.attacker, pokestat::defense, TextBoxDisplay::duration, +1));
 			}
 		}
 
@@ -349,7 +349,7 @@ void Game::check_for_end_of_game() {
 }
 
 void Game::add_textbox(const char* message) {
-	buttons->add(new TextBoxDisplay(message));
+	global_buttons->add(new TextBoxDisplay(message));
 }
 
 void Game::to_menu() {
