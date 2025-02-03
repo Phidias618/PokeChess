@@ -63,7 +63,6 @@ std::ostream& operator<<(std::ostream& os, ButtonCollection::Node* node) {
 	}
 	return os;
 }
-#define SHOW_BUTTON_HITBOX true
 void ButtonCollection::draw() {
 	Node* tmp;
 #if SHOW_BUTTON_HITBOX
@@ -1619,7 +1618,7 @@ void ToggleInformationDisplay::draw() {
 }
 
 bool ToggleInformationDisplay::is_active() {
-	return game.state != in_settings;
+	return game.state != in_settings and game.state != in_menu;
 }
 
 void ToggleInformationDisplay::effect(int, double, double) {
@@ -1638,7 +1637,7 @@ bool PhoneSwitchPage::is_active() {
 		return false;
 	}
 	if (is_right) {
-		return (game.phone_displayed_page - (game.phone_displayed_piece->item != NULL)) <= 1;
+		return (game.phone_displayed_page + (game.phone_displayed_piece->item == NULL)) <= 1;
 	}
 	else {
 		return game.phone_displayed_page > 0;
@@ -1658,10 +1657,9 @@ void PhoneSwitchPage::draw() {
 
 void PhoneSwitchPage::effect(int, double, double) {
 	if (is_right) {
-		PRINT_DEBUG("tourte 43")
 		game.phone_displayed_page++;
 	}
 	else {
-		game.phone_displayed_piece--;
+		game.phone_displayed_page--;
 	}
 }

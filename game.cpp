@@ -46,8 +46,8 @@ Game::Game() : board(*new Board()) {
 	global_buttons->add(new SettingsButton(0.0, 0.0));
 	global_buttons->add(new ToggleInformationDisplay(2.0, 0.0));
 	global_buttons->add(new InformationDisplay(2.5, 5.5));
-	global_buttons->add(new PhoneSwitchPage(0, 5.5, false));
-	global_buttons->add(new PhoneSwitchPage(4.5, 5.5, true));
+	global_buttons->add(new PhoneSwitchPage(0.5, 6, false));
+	global_buttons->add(new PhoneSwitchPage(4.5, 6, true));
 
 	buttons = new ButtonCollection();
 

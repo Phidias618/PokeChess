@@ -11,3 +11,5 @@
 #define PRINT_DEBUG(truc)
 #define PRINT_VAR(var)
 #endif
+
+#define SHOW_BUTTON_HITBOX false
