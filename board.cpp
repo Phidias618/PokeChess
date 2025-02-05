@@ -60,7 +60,7 @@ auto Square::to_graveyard() -> void {
 			break;
 		}
 		piece->is_in_graveyard = true;
-		if (piece->id == King::cls.id) {
+		if (piece->Class == King::cls) {
 			board->nb_of_kings[piece->color]--;
 			board->king_list[piece->color].remove(reinterpret_cast<King*>(piece));
 		}
@@ -155,6 +155,27 @@ Piece* null_constructor(Board& board_, piece_color color_, Square* sq, typing ty
 	return NULL;
 }
 
+Board::Board() {
+
+}
+
+void Board::init() {
+	light_square_color = Color::silver;
+	dark_square_color = Color::blue;
+	selected_piece_color = Color::orange;
+	possible_move_color = Color::aqua;
+	last_move_color = Color::pale_yellow;
+
+
+	miss_rate = 0.1;
+	crit_rate = 1.0 / 16.0;
+
+	for (unsigned int y = 0; y < 8; y++) {
+		grid[y].init(this, y);
+	}
+	reset();
+}
+
 auto Board::clear() -> void {
 	turn_number = 0;
 	File* row_ptr = grid;
@@ -184,6 +205,14 @@ auto Board::clear() -> void {
 void Board::reset() {
 	clear();
 
+	turn_number = 0;
+
+	layout[0] = layout[7] = Rook::cls;
+	layout[1] = layout[6] = Knight::cls;
+	layout[2] = layout[5] = Bishop::cls;
+	layout[3] = Queen::cls;
+	layout[4] = King::cls;
+
 	active_player = white;
 	last_move_begin_square = NULL;
 	last_move_end_square = NULL;
@@ -193,7 +222,7 @@ void Board::reset() {
 	for (unsigned int i = 0; i < 8; i++) {
 		File& file = grid[i];
 		if (layout[i] != NULL)
-			file[0].piece = layout[i](*this, white, &file[0], typeless, NULL);
+			file[0].piece = (*layout[i])(*this, white, &file[0], typeless, NULL);
 		file[0].is_accessible = false;
 
 		file[1].piece = new Pawn(*this, white, &file[1], typeless, NULL);
@@ -204,7 +233,7 @@ void Board::reset() {
 		file[6].is_accessible = false;
 
 		if (layout[i] != NULL)
-			file[7].piece = layout[i](*this, black, &file[7], typeless, NULL);
+			file[7].piece = (*layout[i])(*this, black, &file[7], typeless, NULL);
 		file[7].is_accessible = false;
 
 		for (int j = 2; j < 6; j++) {
@@ -236,77 +265,7 @@ auto Board::operator[](int i) -> File& {
 		throw std::exception();
 }
 
-Board::Board() {
-	turn_number = 0;
-	if (not is_cls_init) {
-		init_all_cls();
-	}
-	surface = Surface::createRGB(TILE_SIZE * 8, TILE_SIZE * 8);
 
-
-	light_square_color = Color::silver;
-	dark_square_color = Color::blue;
-	selected_piece_color = Color::orange;
-	possible_move_color = Color::aqua;
-	last_move_color = Color::pale_yellow;
-
-
-	in_bonus_move = false;
-	active_player = white;
-	last_move_data = move_data();
-	last_move_begin_square = NULL;
-	last_move_end_square = NULL;
-
-	miss_rate = 0.1;
-	crit_rate = 1.0 / 16.0;
-
-	white_death = black_death = 0;
-
-	layout[0] = layout[7] = Rook::cls;
-	layout[1] = layout[6] = Knight::cls;
-	layout[2] = layout[5] = Bishop::cls;
-	layout[3] = Queen::cls;
-	layout[4] = King::cls;
-
-	nb_of_kings[white] = nb_of_kings[black] = 0;
-
-	memset(white_graveyard, NULL, 16);
-	memset(black_graveyard, NULL, 16);
-
-
-	for (unsigned int y = 0; y < 8; y++) {
-		grid[y].init(this, y);
-	}
-
-	SDL_Rect dest_rect;
-	dest_rect.w = dest_rect.h = TILE_SIZE;
-
-	this->surface.fill(dark_square_color);
-	for (unsigned int i = 0; i < 8; i++) {
-		dest_rect.x = TILE_SIZE * i;
-		dest_rect.y = (i & 1) * TILE_SIZE;
-		for (unsigned int j = i & 1; j < 8; j += 2) {
-			SDL_FillSurfaceRect(this->surface, &dest_rect, light_square_color);
-			dest_rect.y += 2 * TILE_SIZE;
-		}
-	}
-
-	for (unsigned int i = 0; i < 8; i++) {
-		File& file = grid[i];
-		if (layout[i] != NULL)
-			file[0].piece = layout[i](self, white, &file[0], typeless, NULL);
-
-		file[1].piece = new Pawn(self, white, &file[1], typeless, NULL);
-
-
-		file[6].piece = new Pawn(self, black, &file[6], typeless, NULL);
-
-		if (layout[i] != NULL)
-			file[7].piece = layout[i](self, black, &file[7], typeless, NULL);
-	}
-	/*self[4][7].piece = new King(self, black, &self[4][7], typeless, no_item);
-	self[4][7].update_graphic();*/
-}
 
 bool Board::in_stalemate(piece_color color) {
 	for (Square& begin_square : self) {

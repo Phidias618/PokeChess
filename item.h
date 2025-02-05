@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SDL+.h"
+#include "poketyping.h"
 #include "assets.h"
 
 class Piece;
@@ -16,11 +17,10 @@ enum item_placeholder_type {
 
 struct ItemClass {
 private:
-	ItemClass(PokeItem* (*)(Piece*, ItemClass&), int (*usefulness_tier)(Piece*), void (*draw)(Surface, SDL_Rect*, size, anchor), void (*)(char*&), const char* name_[], bool RNG);
+	ItemClass(PokeItem* (*)(Piece*, ItemClass&), int (*usefulness_tier)(Piece*), void (*draw)(Surface, SDL_Rect*, size, anchor), const char* name_[], const char** description, bool RNG);
 
 	PokeItem* (*constructor)(Piece*, ItemClass&);
 	void (*_draw)(Surface, SDL_Rect*, size, anchor);
-	void (*_update_description)(char*&);
 
 	friend void* init_item_table(void);
 public:
@@ -29,17 +29,12 @@ public:
 	item_placeholder_type type;
 	bool is_avaible;
 	bool is_RNG_dependant;
-	char* description;
+	const char** description;
 	const char** name;
 
 	int (*usefulness_tier)(Piece*);
 	inline void draw(Surface surface, SDL_Rect* rect = NULL, size s=regular, anchor a = top_left) {
 		_draw(surface, rect, s, a);
-	}
-
-	inline void update_description() {
-		if (type == normal_item)
-			_update_description(description);
 	}
 
 	PokeItem* operator()(Piece*);

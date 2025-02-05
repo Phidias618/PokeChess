@@ -81,7 +81,7 @@ private:
 	File grid[8];
 
 public:
-	PieceClass layout[8];
+	PieceClass* layout[8];
 
 	std::forward_list<King*> king_list[2];
 	short nb_of_kings[2];
@@ -120,6 +120,8 @@ public:
 	Surface surface;
 
 	Board();
+
+	void init();
 
 	bool in_stalemate(piece_color color);
 

@@ -8,33 +8,17 @@
 #include "poketyping.h"
 #include "piece.h"
 
+#define set_cls(Class, id, name) PieceClass  Class::__cls = PieceClass([](Board& board, piece_color color, Square* sq, typing type, PokeItem* item) -> Piece* { return new Class(board, color, sq, type, item);  }, id, name); PieceClass* const Class::cls = &Class::__cls;
 
-#define set_cls(Class, id) Class::cls = PieceClass([](Board& board, piece_color color, Square* sq, typing type, PokeItem* item) -> Piece* { return new Class(board, color, sq, type, item);  }, id);
-
-PieceClass Piece::cls = PieceClass(NULL, -1);
-PieceClass Queen::cls = PieceClass(NULL, -1);
-PieceClass Pawn::cls = PieceClass(NULL, -1);
-PieceClass Rook::cls = PieceClass(NULL, -1);
-PieceClass Bishop::cls = PieceClass(NULL, -1);
-PieceClass Knight::cls = PieceClass(NULL, -1);
-PieceClass King::cls = PieceClass(NULL, -1);
+set_cls(King, 0, "King");
+set_cls(Queen, 1, "Queen");
+set_cls(Bishop, 2, "Bishop");
+set_cls(Knight, 3, "Knight");
+set_cls(Rook, 4, "Rook");
+set_cls(Pawn, 5, "Pawn");
 
 
-
-
-bool init_all_cls() {
-	if (not is_cls_init) {
-		set_cls(King, 0);
-		set_cls(Pawn, 5);
-		set_cls(Knight, 3);
-		set_cls(Bishop, 2);
-		set_cls(Rook, 4);
-		set_cls(Queen, 1);
-	}
-	return true;
-}
-
-bool is_cls_init = init_all_cls();
+#undef __set_cls
 #undef set_cls
 
 
@@ -45,13 +29,7 @@ bool is_cls_init = init_all_cls();
 constexpr int ABS_INT(int x) {
 	return (x >= 0) ? x : -x;
 }
-const char* empty_str = "";
-const char* Pawn_str = "Pawn";
-const char* Bishop_str = "Bishop";
-const char* Knight_str = "Knight";
-const char* King_str = "King";
-const char* Queen_str = "Queen";
-const char* Rook_str = "Rook";
+
 
 void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square* target_square_) {
 	attacker = attacker_;
@@ -144,11 +122,11 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 
 }
 
-PieceClass::PieceClass() : constructor(NULL), id(-2) {
+PieceClass::PieceClass() : constructor(NULL), id(-2), name("") {
 	;
 }
 
-PieceClass::PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> ctor, int id_) : id(id_), constructor(ctor) {
+PieceClass::PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> ctor, int id_, const char* const _name) : id(id_), constructor(ctor), name(_name) {
 	;
 }
 
@@ -176,9 +154,9 @@ Piece* PieceClass::operator()(Board& board, piece_color color, Square* sq, typin
 
 
 
-Piece::Piece(Board& board_, int id_, piece_color color_, Square* sq, typing type_, PokeItem* item) :
+Piece::Piece(Board& board_, PieceClass* const _Class, piece_color color_, Square* sq, typing type_, PokeItem* item) :
 	board(board_),
-	id(id_),
+	Class(_Class),
 	color(color_),
 	sprite(Surface::createRGBA(TILE_SIZE, TILE_SIZE)),
 	square(sq),
@@ -187,8 +165,6 @@ Piece::Piece(Board& board_, int id_, piece_color color_, Square* sq, typing type
 {	
 	has_already_move = false;
 	is_in_graveyard = false;
-
-	name = empty_str;
 
 	update_sprite();
 }
@@ -203,7 +179,7 @@ void Piece::update_sprite() {
 	sprite.fill(0x00000000);
 
 	SDL_Rect dest(0, 0, TILE_SIZE, TILE_SIZE);
-	SDL_Rect area(TILE_SIZE * id, TILE_SIZE * color, TILE_SIZE, TILE_SIZE);
+	SDL_Rect area(TILE_SIZE * Class->id, TILE_SIZE * color, TILE_SIZE, TILE_SIZE);
 
 	sprite.blit(sprite_sheet, &dest, &area);
 	dest = { 5 * TILE_SIZE / 8, 5 * TILE_SIZE / 8, 0, 0 };
@@ -387,11 +363,10 @@ Piece::~Piece() {
 #define useless2 useless1 + useless1 + useless1 + useless1 + useless1 + useless1 + useless1 + useless1 + useless1
 #define useless3 useless2 + useless2 + useless2 + useless2 + useless2 + useless2 + useless2 + useless2 + useless2
 
-King::King(Board& board_, piece_color color, Square* sq, typing type_, PokeItem* item) : Piece(board_, King::cls.id, color, sq, type_, item) {
+King::King(Board& board_, piece_color color, Square* sq, typing type_, PokeItem* item) : Piece(board_, King::cls, color, sq, type_, item) {
 	//board.kings[color] = this;
 	board.nb_of_kings[color]++;
 	board.king_list[color].push_front(this);
-	name = King_str;
 }
 
 King::~King() {
@@ -444,8 +419,7 @@ auto King::base_do_control(Square& target_square) -> bool {
 }
 
 
-Pawn::Pawn(Board& board_, piece_color color, Square* sq, typing type_, PokeItem* item) : Piece(board_, Pawn::cls.id, color, sq, type_, item) {
-	name = Pawn_str;
+Pawn::Pawn(Board& board_, piece_color color, Square* sq, typing type_, PokeItem* item) : Piece(board_, Pawn::cls, color, sq, type_, item) {
 }
 
 inline bool Pawn::base_do_control(Square& square) {
@@ -496,7 +470,7 @@ bool Pawn::can_double_step(Square& target, bool base_rule) {
 }
 
 auto Pawn::can_en_passant(Square& target_square, bool base_rule) -> bool {
-	if (board.last_move_data.attacker == NULL or board.last_move_data.attacker->color == color or board.last_move_data.attacker->id != Pawn::cls.id)
+	if (board.last_move_data.attacker == NULL or board.last_move_data.attacker->color == color or board.last_move_data.attacker->Class != Pawn::cls)
 		return false; // you can only en passant if the last piece move is an enemy pawn
 	
 	if (not base_do_control(target_square)) 
@@ -589,8 +563,7 @@ auto Pawn::base_move_to(Square& target_square) -> move_data {
 }
 
 
-Knight::Knight(Board& board_, piece_color color_, Square* sq, typing type_, PokeItem* item) : Piece(board_, Knight::cls.id, color_, sq, type_, item) {
-	name = Knight_str;
+Knight::Knight(Board& board_, piece_color color_, Square* sq, typing type_, PokeItem* item) : Piece(board_, Knight::cls, color_, sq, type_, item) {
 }
 
 auto Knight::base_do_control(Square& target_square) -> bool {
@@ -603,8 +576,7 @@ auto Knight::base_can_move_to(Square& target_square) -> bool {
 	return Piece::base_can_move_to(target_square) and base_do_control(target_square);
 }
 
-Rook::Rook(Board& board_, piece_color color_, Square* sq, typing type_, PokeItem* item) : Piece(board_, Rook::cls.id, color_, sq, type_, item) {
-	name = Rook_str;
+Rook::Rook(Board& board_, piece_color color_, Square* sq, typing type_, PokeItem* item) : Piece(board_, Rook::cls, color_, sq, type_, item) {
 }
 
 auto Rook::base_can_move_to(Square& target_square) -> bool {
@@ -640,8 +612,7 @@ auto Rook::base_do_control(Square& target_square) -> bool {
 	}
 }
 
-Bishop::Bishop(Board& board_, piece_color color_, Square* sq, typing type_, PokeItem* item) : Piece(board_, Bishop::cls.id, color_, sq, type_, item) {
-	name = Bishop_str;
+Bishop::Bishop(Board& board_, piece_color color_, Square* sq, typing type_, PokeItem* item) : Piece(board_, Bishop::cls, color_, sq, type_, item) {
 }
 
 
@@ -677,9 +648,8 @@ auto Bishop::base_can_move_to(Square& target_square) -> bool {
 }
 
 Queen::Queen(Board& board_, piece_color color_, Square* sq, typing type_, PokeItem* item) :
-	Bishop(board_, color_, sq, type_, item), Rook(board_, color_, sq, type_, item), Piece(board_, Queen::cls.id, color_, sq, type_, item)
+	Bishop(board_, color_, sq, type_, item), Rook(board_, color_, sq, type_, item), Piece(board_, Queen::cls, color_, sq, type_, item)
 {
-	name = Queen_str;
 }
 
 auto inline Queen::base_do_control(Square& target_square) -> bool {
@@ -710,7 +680,7 @@ auto King::can_castle(Square& target_square, bool base_rule) -> bool {
 			Square& intermediate_square = board[x_temp][y];
 			if (intermediate_square.piece != NULL) {
 				Piece* p = intermediate_square.piece;
-				if (p->id == Rook::cls.id and p->color == color and not p->has_already_move) // a rook is avaible to castle with
+				if (p->Class == Rook::cls and p->color == color and not p->has_already_move) // a rook is avaible to castle with
 					return true;
 				return false; // cannot castle through piece
 			}
@@ -722,7 +692,7 @@ auto King::can_castle(Square& target_square, bool base_rule) -> bool {
 		}
 		return false; // the while loop ended up looking outside of the board
 	}
-	else if (target_square.piece->id == Rook::cls.id and target_square.piece->color == color and not target_square.piece->has_already_move) { // check for a castle when you click directly on a rook
+	else if (target_square.piece->Class == Rook::cls and target_square.piece->color == color and not target_square.piece->has_already_move) { // check for a castle when you click directly on a rook
 		Piece* rook = target_square.piece;
 		for (; x_temp != rook->x; x_temp += x_step) {
 			Square& intermediate_square = board[x_temp][y];

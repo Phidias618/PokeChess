@@ -143,6 +143,9 @@ public:
 	void reset();
 	
 	Game();
+
+	void init();
+
 	~Game();
 };
 

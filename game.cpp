@@ -18,6 +18,10 @@ interupted_music_saver* interupted_music;
 bool infinitely = false;
 
 Game::Game() : board(*new Board()) {
+	
+}
+
+void Game::init() {
 	language = LANGUAGE::ENGLISH;
 
 	show_phone = false;
@@ -32,7 +36,7 @@ Game::Game() : board(*new Board()) {
 	settings_music_time = 0.0;
 
 	corner_x = corner_y = 0;
-	drawing_board = Surface::createRGB((int)(18 * TILE_SIZE * scaling_factor), (int)(12 * TILE_SIZE*scaling_factor));
+	drawing_board = Surface::createRGB((int)(18 * TILE_SIZE * scaling_factor), (int)(12 * TILE_SIZE * scaling_factor));
 	bg_color = Color::beige;
 
 	show_type_chart = false;
@@ -60,7 +64,7 @@ Game::Game() : board(*new Board()) {
 	is_holding_something = false;
 
 	selected_piece = NULL;
-	
+
 
 	nb_of_piece_with_type = 0;
 	selected_type = typeless;
@@ -79,6 +83,8 @@ Game::Game() : board(*new Board()) {
 
 	selected_thing_sprite_x_offset = selected_thing_sprite_y_offset = 0;
 	mouse_x = mouse_y = 0.0;
+
+	board.init();
 }
 
 void Game::reset() {
@@ -250,13 +256,13 @@ void Game::resume_move() {
 
 		if (data.do_miss) {
 			char buffer[64] = { '\0' };
-			strcpy_s(buffer, data.attacker->name);
+			strcpy_s(buffer, data.attacker->Class->name);
 			strcat_s(buffer, "'s\nattack's missed");
 			add_textbox(buffer);
 		}
 		else if (data.is_immune) {
 			char buffer[64] = "It doesn't affect\n";
-			strcat_s(buffer, data.defender->name);
+			strcat_s(buffer, data.defender->Class->name);
 			add_textbox(buffer);
 		}
 		else if (data.do_crit and not data.do_miss)
@@ -507,10 +513,10 @@ void Game::to_promotion(Piece* promoting_pawn) {
 
 	buttons->clear();
 	if (promoting_pawn->item == NULL or not promoting_pawn->item->prepare_promotion()) {
-		buttons->add(new PromotionButton(Queen::cls, 7.0, 5.5));
-		buttons->add(new PromotionButton(Rook::cls, 8.0, 5.5));
-		buttons->add(new PromotionButton(Bishop::cls, 9.0, 5.5));
-		buttons->add(new PromotionButton(Knight::cls, 10.0, 5.5));
+		buttons->add(new PromotionButton(*Queen::cls, 7.0, 5.5));
+		buttons->add(new PromotionButton(*Rook::cls, 8.0, 5.5));
+		buttons->add(new PromotionButton(*Bishop::cls, 9.0, 5.5));
+		buttons->add(new PromotionButton(*Knight::cls, 10.0, 5.5));
 	}
 
 	
