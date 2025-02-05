@@ -1,2 +1,3 @@
 SDL3/* linguist-vendored
-SDL_gfx\* linguist-vendored
+SDL_gfx/* linguist-vendored
+SDL_gfx/SDL_gfxPrimitives.c linguist-vendored
