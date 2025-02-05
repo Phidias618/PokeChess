@@ -1136,21 +1136,6 @@ public:
 	}
 
 	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
-
-	static void update_description(char*& description) {
-		if (description == NULL)
-			description = new char[256];
-
-		int end = 0;
-		switch (game.language) {
-		case LANGUAGE::ENGLISH:
-			desc_add("");
-			break;
-		case LANGUAGE::FRENCH:
-			desc_add("");
-			break;
-		}
-	}
 };
 
 const char* WideLens::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {

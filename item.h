@@ -87,7 +87,6 @@ public:
 	void consume(const char* txt = NULL);
 	
 	static void draw(Surface dest, SDL_Rect* rect = NULL, anchor a = top_left) { ; }
-	static void update_description(char*& txt) { ; }
 
 	static Surface get_sprite() { return NULL; }
 
