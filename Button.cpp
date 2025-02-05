@@ -560,9 +560,7 @@ void SwitchSelectionButton::effect(int, double, double) {
 
 }
 
-std::queue<TextBoxDisplay*> TextBoxDisplay::queue = std::queue<TextBoxDisplay*>();
-
-TextBoxDisplay::TextBoxDisplay(const char* text) : Button(5.0, 0.0, 8.0, textbox_frame->h * 8.0 / textbox_frame->w) {
+TextBoxDisplay::TextBoxDisplay(const char* text, bool _is_first) : Button(5.0, 0.0, 8.0, textbox_frame->h * 8.0 / textbox_frame->w) {
 	sprite = Surface::createRGB(textbox_frame->w, textbox_frame->h);
 	sprite.blit(textbox_frame, NULL, NULL);
 	visual_index = text_index = 0;
@@ -575,12 +573,11 @@ TextBoxDisplay::TextBoxDisplay(const char* text) : Button(5.0, 0.0, 8.0, textbox
 	y = 2.0;
 
 	strcpy_s(message, text);
-
-	queue.push(this);
+	is_first = _is_first;
 }
 
 bool TextBoxDisplay::is_active() {
-	return not queue.empty() and queue.front() == this;
+	return is_first;
 }
 
 void TextBoxDisplay::activate() {
@@ -597,6 +594,13 @@ void TextBoxDisplay::activate() {
 	sprite.blit(textbox_frame, NULL, NULL);
 	is_on_second_line = false;
 	visual_index = text_index = 0;
+}
+
+void TextBoxDisplay::destroy_all() {
+	if (next != NULL) {
+		next->destroy_all();
+	}
+	delete this;
 }
 
 Button::update_return_code TextBoxDisplay::update() {
@@ -642,6 +646,14 @@ Button::update_return_code TextBoxDisplay::update() {
 		timer--;
 		if (timer < 0) {
 			kill();
+			
+			if (next == NULL) {
+				game.active_textbox = game.last_textbox = NULL;
+			}
+			else {
+				game.active_textbox = next;
+			}
+
 			delete this;
 			return Button::suicide;
 		}
@@ -655,7 +667,7 @@ void TextBoxDisplay::draw() {
 }
 
 TextBoxDisplay::~TextBoxDisplay() {
-	queue.pop();
+
 }
 
 SkipBonusMoveButton::SkipBonusMoveButton(double x_, double y_) : Button(x_ - skip_button->w / 2.0 / TILE_SIZE, y_ - skip_button->h / 2.0 / TILE_SIZE, (double)skip_button->w / TILE_SIZE, (double)skip_button->h / TILE_SIZE) {

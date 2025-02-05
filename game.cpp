@@ -75,6 +75,8 @@ Game::Game() : board(*new Board()) {
 
 	winner = no_color;
 
+	active_textbox = last_textbox = NULL;
+
 	selected_thing_sprite_x_offset = selected_thing_sprite_y_offset = 0;
 	mouse_x = mouse_y = 0.0;
 }
@@ -100,7 +102,7 @@ void Game::reset() {
 
 	with_check = true;
 
-	TextBoxDisplay::clear();
+	active_textbox = last_textbox = NULL;
 
 	board.reset();
 }
@@ -170,7 +172,11 @@ void Game::draw_rect(Color color, double x, double y, double w, double h) {
 
 void Game::move_selected_piece_to(Square& square) {
 
-	TextBoxDisplay::clear();
+	if (active_textbox != NULL) {
+		active_textbox->destroy_all();
+		active_textbox = last_textbox = NULL;
+	}
+
 	if (current_music == promotion_end_music)
 		resume_background();
 
@@ -349,7 +355,15 @@ void Game::check_for_end_of_game() {
 }
 
 void Game::add_textbox(const char* message) {
-	global_buttons->add(new TextBoxDisplay(message));
+	if (active_textbox == NULL) {
+		active_textbox = last_textbox = new TextBoxDisplay(message, true);
+	}
+	else {
+		TextBoxDisplay* box = new TextBoxDisplay(message, false);
+		last_textbox->add(box);
+		last_textbox = box;
+	}
+	global_buttons->add(last_textbox);
 }
 
 void Game::to_menu() {
