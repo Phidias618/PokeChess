@@ -244,8 +244,8 @@ class TextBoxDisplay : public Button {
 	int shift_delay;
 	piece_color side : 2;
 
-
-	static std::queue<TextBoxDisplay*> queue;
+	bool is_first;
+	TextBoxDisplay* next;
 
 	static inline const int constexpr BUFFER_SIZE = 1024;
 	char message[BUFFER_SIZE];
