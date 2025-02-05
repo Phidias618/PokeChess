@@ -1,4 +1,5 @@
-.vs
 .git
-SDL_gfx
+.vs
 SDL3
+SDL_gfx
+x64
