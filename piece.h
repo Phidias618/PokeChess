@@ -84,7 +84,7 @@ private:
 public:
 	PieceClass();
 
-	PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> constructor, int id);
+	PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> constructor, int id, const char* const name);
 
 	bool operator==(void*) const;
 
@@ -92,6 +92,7 @@ public:
 
 	Piece* operator()(Board& board, piece_color color, Square* sq, typing type, PokeItem* item);
 	int id;
+	const char* const name;
 };
 
 #include "assets.h"
@@ -105,11 +106,13 @@ bool operator==(void* other, const PieceClass Class);
 
 
 class Piece {
+	static PieceClass __cls;
 public:
-	static PieceClass cls;
+	static PieceClass* const cls;
+	PieceClass* const Class;
+
 	typing type;
 	const piece_color color;
-	const int id : 8;
 	
 	bool has_already_move : 1;
 	bool is_in_graveyard : 1;
@@ -122,9 +125,8 @@ public:
 
 	
 	Surface sprite;
-	const char* name;
 
-	Piece(Board& board_, int id_, piece_color color_, Square* sq, typing type_=typeless, PokeItem* item = NULL);
+	Piece(Board& board_, PieceClass* const Class, piece_color color_, Square* sq, typing type_=typeless, PokeItem* item = NULL);
 
 	auto virtual base_can_move_to(Square& square) -> bool;
 	
@@ -159,15 +161,18 @@ public:
 	virtual ~Piece();
 
 	friend class PokeItem;
+	friend bool init_all_cls();
 };
 
 
 class King : public virtual Piece {
+	static PieceClass __cls;
+
 	auto can_castle(Square& target_square, bool base_rule=false) -> bool;
 
 	auto castle(Square& target_square) -> void;
 public:
-	static PieceClass cls;
+	static PieceClass* const cls;
 
 	King(Board& board_, piece_color color, Square* sq, typing type_=typeless, PokeItem* item=NULL);
 
@@ -183,14 +188,18 @@ public:
 
 	friend class LeppaBerry;
 	friend class PokeItem;
+	friend bool init_all_cls();
+
 };
 
 class Pawn : public virtual Piece {
+	static PieceClass __cls;
+
 	auto can_en_passant(Square& target_square, bool base_rule=false) -> bool;
 
 	bool can_double_step(Square& traget, bool base_rule = false);
 public:
-	static PieceClass cls;
+	static PieceClass* const cls;
 
 	Pawn(Board& board_, piece_color color, Square* sq, typing type_ = typeless, PokeItem* item=NULL);
 
@@ -202,11 +211,15 @@ public:
 
 	friend class LeppaBerry;
 	friend class PokeItem;
+	friend bool init_all_cls();
+
 };
 
 class Knight : public virtual Piece {
+	static PieceClass __cls;
+
 public:
-	static PieceClass cls;
+	static PieceClass* const cls;
 
 	Knight(Board& board_, piece_color color, Square* sq, typing type_ = typeless, PokeItem* item=NULL);
 
@@ -215,11 +228,15 @@ public:
 	auto virtual base_do_control(Square& target_square) -> bool;
 
 	friend class PokeItem;
+	friend bool init_all_cls();
+
 };
 
 class Rook : public virtual Piece {
+	static PieceClass __cls;
+
 public:
-	static PieceClass cls;
+	static PieceClass* const cls;
 
 	Rook(Board& board_, piece_color color, Square* sq, typing type_ = typeless, PokeItem* item = NULL);
 
@@ -228,11 +245,15 @@ public:
 	auto virtual base_do_control(Square& target_square) -> bool;
 
 	friend class PokeItem;
+	friend bool init_all_cls();
+
 };
 
 class Bishop : public virtual Piece {
+	static PieceClass __cls;
+
 public:
-	static PieceClass cls;
+	static PieceClass* const cls;
 
 	Bishop(Board& board_, piece_color color, Square* sq, typing type_ = typeless, PokeItem* item = NULL);
 
@@ -241,11 +262,15 @@ public:
 	auto virtual base_do_control(Square& target_square) -> bool;
 
 	friend class PokeItem;
+	friend bool init_all_cls();
+
 };
 
 class Queen : public virtual Rook, public virtual Bishop {
+	static PieceClass __cls;
+
 public:
-	static PieceClass cls;
+	static PieceClass* const cls;
 
 	Queen(Board& board_, piece_color color, Square* sq, typing type_ = typeless, PokeItem* item = NULL);
 
@@ -254,6 +279,8 @@ public:
 	auto virtual base_do_control(Square& target_square) -> bool;
 
 	friend class PokeItem;
+	friend bool init_all_cls();
+
 };
 
 

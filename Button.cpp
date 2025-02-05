@@ -298,7 +298,7 @@ void PromotionButton::effect(int mouse_button, double, double) {
 	game.to_game(true);
 	if (game.with_typing) {
 		char buffer[64] = "Pawn evolved into\n";
-		strcat_s(buffer, square->piece->name);
+		strcat_s(buffer, square->piece->Class->name);
 		game.add_textbox(buffer);
 	}
 
@@ -1220,7 +1220,12 @@ InformationDisplay::InformationDisplay(double x_, double y_) : Button(x_ - 1.25,
 }
 
 void InformationDisplay::draw() {
-	if (game.phone_displayed_item != displayed_item or game.phone_displayed_type != displayed_type or game.phone_displayed_piece != displayed_piece or game.phone_displayed_page != displayed_page or language != game.language) {
+	if (game.phone_displayed_item != displayed_item 
+		or game.phone_displayed_type != displayed_type 
+		or game.phone_displayed_piece != displayed_piece 
+		or game.phone_displayed_page != displayed_page 
+		or language != game.language) 
+	{
 		displayed_item = game.phone_displayed_item;
 		displayed_piece = game.phone_displayed_piece;
 		displayed_type = game.phone_displayed_type;
@@ -1242,6 +1247,7 @@ void InformationDisplay::resize() {
 void InformationDisplay::re_draw() {
 	//game.draw_rect(Color::sky, x - 1.2, y - 1.9, 2.45, 4.8);
 	screen.fill(Color::sky);
+	PRINT_VAR((int)(game.language));
 	// game.draw(phone_frame, x, y, center);
 	if (displayed_item != NULL) {
 		int X = w * TILE_SIZE / 2;
@@ -1260,7 +1266,7 @@ void InformationDisplay::re_draw() {
 		rect.y = Y;
 		rect.x = X;
 
-		screen.blit(CSM_font_array[TILE_SIZE / 5].render_blended_wrapped(displayed_item->description, Color::black, TILE_SIZE * 2.3), &rect, NULL, top_left);
+		screen.blit(CSM_font_array[TILE_SIZE / 5].render_blended_wrapped(displayed_item->description[(int)language], Color::black, TILE_SIZE * 2.3), &rect, NULL, top_left);
 	}
 	else if (displayed_type != typeless) {
 
@@ -1571,7 +1577,7 @@ void InformationDisplay::re_draw() {
 			rect.x = X;
 			rect.y = Y;
 
-			screen.blit(CSM_font_array[(int)(TILE_SIZE / 2)].render_blended(displayed_piece->name, Color::black), &rect, NULL, top_middle);
+			screen.blit(CSM_font_array[(int)(TILE_SIZE / 2)].render_blended(displayed_piece->Class->name, Color::black), &rect, NULL, top_middle);
 			
 			Y += 3 * TILE_SIZE / 4;
 			rect.x = X;

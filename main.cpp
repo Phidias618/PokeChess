@@ -1,13 +1,14 @@
 #include <SDL.h>
 #include <iostream>
 #include <string>
-#define private public
+
 #include "SDL+.h"
 #include "Debugger.h"
 
 #include "assets.h"
 
 #include "piece.h"
+
 #include "Button.h"
 
 #include "poketyping.h"
@@ -24,8 +25,9 @@ void loop();
 
 int main(int argc, char* args[])
 {	
+	game.init();
 	if (SDL_plus_init(SDL_INIT_VIDEO | SDL_INIT_AUDIO, IMG_INIT_PNG, MIX_INIT_WAVPACK)) {
-		
+
 		if (game.window == NULL)
 		{
 			//printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
