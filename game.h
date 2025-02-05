@@ -76,6 +76,8 @@ public:
 
 		Piece* selected_piece; // data for the state in_game
 	};
+	
+	TextBoxDisplay * active_textbox, * last_textbox;
 
 	bool show_phone;
 	ItemClass* phone_displayed_item;

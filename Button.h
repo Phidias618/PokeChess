@@ -244,8 +244,8 @@ class TextBoxDisplay : public Button {
 	int shift_delay;
 	piece_color side : 2;
 
-
-	static std::queue<TextBoxDisplay*> queue;
+	bool is_first;
+	TextBoxDisplay* next;
 
 	static inline const int constexpr BUFFER_SIZE = 1024;
 	char message[BUFFER_SIZE];
@@ -258,18 +258,9 @@ class TextBoxDisplay : public Button {
 public:
 	static const int duration = FPS / 2;
 
-	static void clear() {
-		if (queue.empty())
-			return;
-		for (TextBoxDisplay* box = queue.front(); not queue.empty(); queue.pop()) {
-			if (box != NULL) {
-				box->kill();
-				// delete box;
-			}
-		}
-	}
+	void destroy_all();
 
-	TextBoxDisplay(const char* text);
+	TextBoxDisplay(const char* text, bool);
 
 	virtual void activate();
 
@@ -280,6 +271,8 @@ public:
 	virtual void draw();
 
 	virtual ~TextBoxDisplay();
+
+	void add(TextBoxDisplay* _next) { next = _next; }
 };
 
 class SkipBonusMoveButton : public Button {
