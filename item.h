@@ -70,11 +70,6 @@ enum class item_id : short {
 	iron_ball,
 };
 
-
-typing operator-(const item_id x, const item_id y);
-
-extern const char* name_table[];
-
 // the property of an item can be both determined by virtual methods and with id for more specific effects
 class PokeItem {
 public:

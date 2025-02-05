@@ -2,84 +2,10 @@
 #include "game.h"
 #include "board.h"
 
-#define DESCRIPTION_MAX_SIZE 256
-
-typing operator-(const item_id x, const item_id y) {
-	return (typing)((short)x - (short)y);
-}
-
 move_data PokeItem::move_to(Square& target) {
 	return holder->base_move_to(target);
 }
 
-const char* name_table[] = {
-	"",
-	"",
-	"",
-	"fire stone",
-	"water stone",
-	"leaf stone",
-	"volt stone",
-	"ice stone",
-	"",
-	"",
-	"",
-	"",
-	"",
-	"shiny stone",
-	"",
-	"",
-	"",
-	"",
-	"dusk stone",
-	"",
-	"soothe bell",
-
-	"leppa berry",
-	""
-	"air balloon",
-	"cell battery",
-	"snowball",
-	"absorb bulb",
-	"",
-	"bright powder",
-
-	"expert belt",
-	"wide lens",
-	"blunder policy",
-
-	"life orb",
-	"metronome",
-	"light ball",
-	"lucky punch",
-	"scope lens",
-
-	"honey",
-
-	"loaded_dice",
-
-	"protective pads",
-	"safety googles",
-
-	"shed_shell",
-
-	"normal gem",
-
-	"heavy duty boots",
-
-	"eviolite",
-	"",
-	"rocky_helmet",
-	"red_card",
-	"sticky_barb",
-	"",
-	"ring target",
-	"everstone",
-	"iron ball",
-	"assault vest",
-	"baguette",
-
-};
 
 PokeItem::PokeItem(Piece* piece, item_id id_, int prio, ItemClass& IC) : id(id_), holder(piece), priority(prio), cls(IC) {
 	name = NULL;
@@ -99,17 +25,6 @@ void PokeItem::consume(const char* txt) {
 	delete this;
 }
 
-#define desc_add(str) \
-{ \
-	const char* __add_str__ = (str); \
-	if (__add_str__ != NULL) \
-		for (int __add_counter__ = 0; __add_str__[__add_counter__]; __add_counter__++) { \
-			description[end++] = __add_str__[__add_counter__]; \
-		} \
-	description[end] = '\0'; \
-	if (end >= 256) \
-		PRINT_DEBUG("BANDE DE KON C'EST PAS POSSIBLE D'ETRE AUSSI CON, MEME TRUMP C MIEUX"); \
-}
 
 #define defdraw(x, y) \
 static void draw(Surface dest, SDL_Rect* pos = NULL, size s = regular, anchor a = top_left) { \
