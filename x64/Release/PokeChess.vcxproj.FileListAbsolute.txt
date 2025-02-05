@@ -1,2 +1,0 @@
-C:\Users\Elève\source\repos\PokeChess\x64\Release\PokeChess.exe
-C:\Users\Eliott\source\repos\PokeChess\x64\Release\PokeChess.exe
