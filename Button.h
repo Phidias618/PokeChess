@@ -350,6 +350,15 @@ public:
 	virtual void effect(int, double, double);
 };
 
+class EnableAntichessButton : public Button {
+public:
+	EnableAntichessButton(double x_, double y_);
+
+	virtual void draw();
+
+	virtual void effect(int, double, double);
+};
+
 class DisableSoundsButton : public Button {
 public:
 	DisableSoundsButton(double x_, double y_);

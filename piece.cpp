@@ -308,9 +308,16 @@ move_data Piece::base_move_to(Square& target_square) {
 bool Piece::can_move_to(Square& target, Uint64 flags) {
 	Piece* adv = target.piece;
 
+	static bool check_for_is_move_disallowed = true, check_for_is_move_allowed = true;
+	static bool check_for_antichess = true;
+
+
+	if (board.in_bonus_move and board.last_move_data.attacker != this)
+		return false; // when you are allowed to play twice or more, you can only move the same piece
+
 	if ((flags & ignore_honey) == 0 and type == bug and not IS_SAFETY_GOOGLES(item) and not HOLDS_HONEY(adv)) {
 		for (Square& square : board) {
-			if (can_move_to(square, flags|ignore_honey) or (item != NULL and item->is_move_allowed(square))) {
+			if (can_move_to(square, flags | ignore_honey)) {
 				if (HOLDS_HONEY(square.piece)) {
 					// congratulation, you are a bug type that can reach opposing honey
 					return false;
@@ -320,7 +327,24 @@ bool Piece::can_move_to(Square& target, Uint64 flags) {
 	}
 	bool base = base_can_move_to(target);
 
-	static bool check_for_is_move_disallowed = true, check_for_is_move_allowed = true;
+	if (game.with_antichess and check_for_antichess and target.piece == NULL and (Class != Pawn::cls or not dynamic_cast<Pawn*>(this)->can_en_passant(target))) {
+		check_for_antichess = false;
+
+		for (Square& s1 : board) {
+			Piece* piece = s1.piece;
+			if (piece != NULL and piece->color == color) {
+				for (Square& s2 : board) {
+					if (s2.piece != NULL and piece->can_move_to(s2)) {
+						check_for_antichess = true;
+						return false;
+					}
+				}
+			}
+		}
+
+		check_for_antichess = true;
+	}
+
 
 	if (item != NULL and (flags & ignore_item) == 0) {
 		if (base) {
@@ -658,6 +682,10 @@ auto Queen::base_can_move_to(Square& target_square) -> bool {
 
 auto King::can_castle(Square& target_square, bool base_rule) -> bool {
 	int dx = target_square.x - x;
+
+	if (game.with_antichess)
+		return false;
+
 	if (has_already_move or target_square.y != y) // cannot castle if the king already moved, or if it's not on the same row
 		return false;
 

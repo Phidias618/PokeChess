@@ -226,6 +226,7 @@ public:
 
 	friend class LeppaBerry;
 	friend class PokeItem;
+	friend class Piece;
 	friend bool init_all_cls();
 
 };

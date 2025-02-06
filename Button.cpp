@@ -951,6 +951,21 @@ void DisableRNGButton::effect(int mouse_button, double, double) {
 	}
 }
 
+EnableAntichessButton::EnableAntichessButton(double x_, double y_) : Button(x_, y_, 1.0, 1.0) {
+	;
+}
+
+void EnableAntichessButton::draw() {
+	game.draw(pokeball_img, x, y);
+	game.draw(icon_sheet, x, y, game.with_antichess, 0, 1, 1);
+	game.draw(CSM_font_array[TILE_SIZE / 3].render_shaded("Suicide Cup", Color::black, game.bg_color), x + 1.0, y + 0.5, middle_left);
+}
+
+void EnableAntichessButton::effect(int mouse_button, double, double) {
+	if (mouse_button == SDL_BUTTON_LEFT) {
+		game.with_antichess = not game.with_antichess;
+	}
+}
 
 DisableSoundsButton::DisableSoundsButton(double x_, double y_) : Button(x_, y_, 3.0, 1.0) {
 	;

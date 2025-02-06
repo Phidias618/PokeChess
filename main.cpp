@@ -279,7 +279,7 @@ void loop() {
 	if (TPF_ms > SDL_GetTicks() - start_time)
 		SDL_Delay((int)(TPF_ms + start_time - SDL_GetTicks()));
 
-	if (Button::pressed_button != NULL) {
+	if (Button::pressed_button != NULL or true) {
 		char title[100] = "";
 		strcat_s(title, "(");
 		strcat_s(title, std::to_string(game.screen->w).c_str());

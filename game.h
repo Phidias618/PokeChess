@@ -103,6 +103,7 @@ public:
 	bool with_check;
 	bool with_RNG;
 	bool with_random_battle;
+	bool with_antichess = false;
 
 	bool with_sounds;
 	short music_volume;

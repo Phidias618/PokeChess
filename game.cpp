@@ -200,19 +200,9 @@ void Game::move_selected_piece_to(Square& square) {
 	if (not board.last_move_data.interrupt_move)
 		resume_move();
 
-	if (board.nb_of_kings[white] == 0 and board.nb_of_kings[black] == 0) {
-		winner = no_color;
-		to_end_of_game();
-	}
-	else if (board.nb_of_kings[white] == 0) {
-		winner = black;
-		to_end_of_game();
-	}
-	else if (board.nb_of_kings[black] == 0) {
-		winner = white;
-		to_end_of_game();
-	}
-	else if (board.last_move_data.promotion)
+	check_for_end_of_game();
+
+	if (state != end_of_game and board.last_move_data.promotion)
 		to_promotion(board.last_move_data.attacker);
 
 }
@@ -303,22 +293,9 @@ void Game::resume_move() {
 		board.in_bonus_move = false;
 		change_turn();
 	}
+	
+	check_for_end_of_game();
 
-
-	if (board.nb_of_kings[white] == 0) {
-		to_end_of_game();
-		if (board.nb_of_kings[black] == 0) {
-			winner = no_color;
-		}
-		else {
-			winner = black;
-		}
-	}
-
-	else if (board.nb_of_kings[black] == 0) {
-		to_end_of_game();
-		winner = white;
-	}
 	board.turn_number++;
 	board.move_historic.push_front(data);
 }
@@ -339,20 +316,44 @@ void Game::change_turn() {
 			}
 		}
 	}
-
-	check_for_end_of_game();
 }
 
 void Game::check_for_end_of_game() {
-	if (with_check and board.in_stalemate(board.active_player)) {
-		to_end_of_game();
-		winner = no_color;
-		for (King* king : board.king_list[board.active_player]) {
-			if (king->is_in_check()) {
-				// checkmate congratulations
-				winner = not board.active_player;
-				break;
+	if (with_check) {
+		if (board.in_stalemate(board.active_player)) {
+			to_end_of_game();
+			winner = no_color;
+			for (King* king : board.king_list[board.active_player]) {
+				if (king->is_in_check()) {
+					// checkmate congratulations
+					winner = not board.active_player;
+					break;
+				}
 			}
+		}
+	}
+	else if (with_antichess) {
+		if (board.white_death == 16) {
+			winner = white;
+			to_end_of_game();
+		}
+		else if (board.black_death == 16) {
+			winner = black;
+			to_end_of_game();
+		}
+	}
+	else {
+		if (board.nb_of_kings[white] == 0 and board.nb_of_kings[black] == 0) {
+			winner = no_color;
+			to_end_of_game();
+		}
+		else if (board.nb_of_kings[white] == 0) {
+			winner = black;
+			to_end_of_game();
+		}
+		else if (board.nb_of_kings[black] == 0) {
+			winner = white;
+			to_end_of_game();
 		}
 	}
 }
@@ -380,6 +381,7 @@ void Game::to_menu() {
 	buttons->add(new BeginGameButton());
 	buttons->add(new DisableRNGButton(14.0, 3.0));
 	buttons->add(new RandomBattleButton(14.0, 4.0));
+	buttons->add(new EnableAntichessButton(14.0, 5.5));
 
 	reset();
 }

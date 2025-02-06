@@ -1048,7 +1048,7 @@ const char* AssaultVest::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 };
 
 class ShedShell : public PokeItem {
-	bool activated;
+	bool activated = false;
 public:
 	static const bool RNG = false;
 
@@ -1082,13 +1082,10 @@ public:
 		return true;
 	}
 
-	virtual void after_move_effect(move_data& data) {
-		if (holder->Class != Knight::cls) {
-			Knight K = Knight(game.board, holder->color, data.begin_square, holder->type, NULL);
-			if (K.base_do_control(*data.target_square) and not data.cancel) {
-				consume();
-			}
-		}
+	virtual move_data move_to(Square& target) {
+		move_data data = holder->base_move_to(target);
+		consume();
+		return data;
 	}
 	
 	virtual void add_cosmetic(move_data& data) {
