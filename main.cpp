@@ -193,7 +193,7 @@ void handle_event(SDL_Event e) {
 					if (selected_square.piece != NULL) {
 						if (false) { // outil de debug pour voir les case controller par une piece
 							for (Square& square : game.board) {
-								if (selected_square.piece->base_do_control(square)) {
+								if (selected_square.piece->do_control(square)) {
 									square.is_accessible = true;
 								}
 							}

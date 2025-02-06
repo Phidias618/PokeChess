@@ -243,8 +243,6 @@ bool Piece::base_can_move_to(Square& target_square) {
 bool Piece::base_do_control(Square& target_square) { return false; }
 
 move_data Piece::move_to(Square& square) {
-	
-	
 	move_data data;
 
 	if (item == NULL or can_move_to(square, ignore_item)) {
@@ -310,7 +308,7 @@ move_data Piece::base_move_to(Square& target_square) {
 bool Piece::can_move_to(Square& target, Uint64 flags) {
 	Piece* adv = target.piece;
 
-	if ((flags & ignore_honey) != 0 and type == bug and (item == NULL or item->id != item_id::safety_googles) and not HOLDS_HONEY(adv)) {
+	if ((flags & ignore_honey) == 0 and type == bug and not IS_SAFETY_GOOGLES(item) and not HOLDS_HONEY(adv)) {
 		for (Square& square : board) {
 			if (can_move_to(square, flags|ignore_honey) or (item != NULL and item->is_move_allowed(square))) {
 				if (HOLDS_HONEY(square.piece)) {
@@ -324,16 +322,16 @@ bool Piece::can_move_to(Square& target, Uint64 flags) {
 
 	static bool check_for_is_move_disallowed = true, check_for_is_move_allowed = true;
 
-	if (item != NULL and (flags & ignore_item) != 0) {
+	if (item != NULL and (flags & ignore_item) == 0) {
 		if (base) {
-			if ((flags & ignore_movement_restriction) != 0 and check_for_is_move_allowed) {
+			if ((flags & ignore_movement_restriction) == 0 and check_for_is_move_allowed) {
 				check_for_is_move_disallowed = false;
 				base = not item->is_move_disallowed(target);
 				check_for_is_move_disallowed = true;
 			}
 		}
 		else {
-			if ((flags & ignore_movement_bonus) != 0 and check_for_is_move_allowed) {
+			if ((flags & ignore_movement_bonus) == 0 and check_for_is_move_allowed) {
 				check_for_is_move_allowed = false;
 				base = item->is_move_allowed(target);
 				check_for_is_move_allowed = true;
@@ -454,6 +452,9 @@ bool Pawn::can_double_step(Square& target, bool base_rule) {
 	int direction = ((color == white) ? 1 : -1);
 	int dy = target.y - y;
 	int dx = target.x - x;
+	PRINT_VAR(dx);
+	PRINT_VAR(dy);
+	PRINT_VAR(has_already_move);
 	return 
 		(dx == 0) and 
 		(dy == 2 * direction) and 

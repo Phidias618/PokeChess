@@ -915,7 +915,7 @@ public:
 			data.move_again = false;
 			activated = true;
 			game.board.in_bonus_move = false;
-			data.attacker->move_to(*data.begin_square);
+			data.attacker->base_move_to(*data.begin_square);
 		}
 	}
 
@@ -1377,7 +1377,9 @@ public:
 	}
 
 	virtual move_data move_to(Square& target) {
-		move_data data = holder->move_to(target);
+		holder->has_already_move = false;
+		move_data data = holder->base_move_to(target);
+		holder->has_already_move = true;
 		consume();
 		return data;
 	}
