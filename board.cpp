@@ -106,7 +106,6 @@ auto Square::clear() -> void {
 }
 
 File::File() {
-	board = NULL;
 }
 
 
@@ -116,7 +115,6 @@ File::File(Board* b, int y){
 }
 
 auto File::init(Board* b, int x) -> void {
-	board = b;
 	for (int y = 0; y < 8; y++) {
 		data[y].board = b;
 		((short*)&data[y])[4] = x;
@@ -197,6 +195,9 @@ auto Board::clear() -> void {
 	}
 
 	nb_of_kings[white] = nb_of_kings[black] = 0;
+
+	king_list[white].clear();
+	king_list[black].clear();
 
 	black_death = 0;
 

@@ -17,6 +17,8 @@ inline piece_color operator not(piece_color c) {
 extern bool is_cls_init;
 bool init_all_cls();
 
+class PokeItem;
+
 class Square;
 
 class Piece;
@@ -36,7 +38,9 @@ struct move_data {
 		promotion = en_passant = castling = interrupt_move = was_in_check = escaped_check = move_again = suicide = cancel = do_crit = is_super_effective = is_not_very_effective = is_immune = do_miss = false;
 		attacker = NULL;
 		defender = NULL;
+		crit_rate = miss_rate = 0;
 		begin_square = target_square = NULL;
+		attacker_item_slot = defenser_item_slot = NULL;
 	}
 
 	void set_type_matchup_data(Piece* attacker, Piece* defender, Square* target_square);
@@ -47,7 +51,13 @@ struct move_data {
 	Square* begin_square;
 	Square* target_square;
 
+	double miss_rate, crit_rate;
+
+	PokeItem* attacker_item_slot;
+	PokeItem* defenser_item_slot;
+
 	effectiveness matchup;
+
 	// flags for regular chess
 	bool promotion : 1; // stores whether the move resulted in a promotion
 	bool en_passant : 1; // stores whether the move is en passant
@@ -104,6 +114,12 @@ public:
 
 bool operator==(void* other, const PieceClass Class);
 
+enum move_flags_mask {
+	ignore_item = 0b1,
+	ignore_movement_restriction = 0b10,
+	ignore_movement_bonus = 0b100,
+	ignore_honey = 0b1000,
+};
 
 class Piece {
 	static PieceClass __cls;
@@ -122,7 +138,6 @@ public:
 	Square* square;
 	
 	Board& board;
-
 	
 	Surface sprite;
 
@@ -130,7 +145,7 @@ public:
 
 	auto virtual base_can_move_to(Square& square) -> bool;
 	
-	bool can_move_to(Square& target);
+	bool can_move_to(Square& target, Uint64 flags = 0);
 
 	auto virtual base_do_control(Square& square) -> bool;
 

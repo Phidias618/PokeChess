@@ -94,8 +94,6 @@ void Game::reset() {
 	is_holding_something = false;
 	show_type_chart = false;
 
-	to_menu();
-
 	std::random_device rand;
 	RNG.seed(rand());
 
@@ -220,7 +218,7 @@ void Game::move_selected_piece_to(Square& square) {
 }
 
 void Game::resume_move() {
-	move_data data = board.last_move_data;
+	move_data& data = board.last_move_data;
 	piece_color player = board.last_move_data.attacker->color;
 
 	if (with_typing) {
@@ -278,15 +276,13 @@ void Game::resume_move() {
 		}
 	}
 
-	/*
-	if (data.defender != NULL and data.defender->item != NULL and (data.attacker->item == NULL or data.attacker->item->id != item_id::protective_pads)) {
-		data.defender->item->revenge(data);
+	if (data.attacker_item_slot != NULL and not IS_SAFETY_GOOGLES(data.defenser_item_slot)) {
+		data.attacker_item_slot->add_cosmetic(data);
 	}
 
-	if (data.attacker->item != NULL and (data.defender == NULL or data.defender->item == NULL or data.defender->item->id != item_id::safety_googles)) {
-		data.attacker->item->after_move_effects(data);
+	if (data.defenser_item_slot != NULL and not IS_PROTECTIVE_PADS(data.attacker_item_slot)) {
+		data.defenser_item_slot->add_cosmetic(data);
 	}
-	*/
 
 	if (data.move_again) {
 		board.in_bonus_move = true;
@@ -307,6 +303,7 @@ void Game::resume_move() {
 		board.in_bonus_move = false;
 		change_turn();
 	}
+
 
 	if (board.nb_of_kings[white] == 0) {
 		to_end_of_game();
@@ -383,6 +380,8 @@ void Game::to_menu() {
 	buttons->add(new BeginGameButton());
 	buttons->add(new DisableRNGButton(14.0, 3.0));
 	buttons->add(new RandomBattleButton(14.0, 4.0));
+
+	reset();
 }
 
 

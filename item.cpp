@@ -8,21 +8,18 @@ move_data PokeItem::move_to(Square& target) {
 
 
 PokeItem::PokeItem(Piece* piece, item_id id_, int prio, ItemClass& IC) : id(id_), holder(piece), priority(prio), cls(IC) {
-	name = NULL;
+	used = false;
 }
 
 PokeItem::PokeItem(Piece* piece, ItemClass& IC) : id(item_id::basic), holder(piece), priority(0), cls(IC) {
-	;
+	used = false;
 }
 
 
-void PokeItem::consume(const char* txt) {
-	if (txt != NULL) {
-		game.add_textbox(txt);
-	}
+void PokeItem::consume() {
+	used = true;
 	holder->item = NULL;
 	holder->update_sprite();
-	delete this;
 }
 
 
@@ -376,18 +373,18 @@ public:
 		return (int) (e == super_effective or (type == normal and e == neutral));
 	}
 
-	virtual void defense_modifier(effectiveness& e, Piece* attacker) {
-		if (attacker->type == type) {
-			if (e == super_effective or type == normal)
-				--e;
+	virtual void defense_modifier(move_data& data) {
+		if (data.attacker->type == type) {
+			if (data.matchup == super_effective or type == normal)
+				--data.matchup;
 			else {
-				--e.intensity;
+				--data.matchup.intensity;
 			}
 		}
 	}
 
 	virtual void revenge(move_data& data) {
-		if (data.attacker->type == type and not data.do_miss) {
+		if (holder->is_in_graveyard and data.attacker->type == type) {
 			consume();
 		}
 	}
@@ -441,16 +438,16 @@ public:
 		return counter;
 	}
 
-	virtual void defense_modifier(effectiveness& e, Piece* attacker) {
-		if (e.main == immune) {
-			e.main = neutral;
-			if (e.intensity > 0) {
-				e.intensity--;
-				e.main = super_effective;
+	virtual void defense_modifier(move_data& data) {
+		if (data.matchup == immune) {
+			data.matchup.main = neutral;
+			if (data.matchup.intensity > 0) {
+				data.matchup.intensity--;
+				data.matchup.main = super_effective;
 			}
-			else if (e.intensity < 0) {
-				e.intensity++;
-				e.main = not_very_effective;
+			else if (data.matchup.intensity < 0) {
+				data.matchup.intensity++;
+				data.matchup.main = not_very_effective;
 			}
 		}
 	}
@@ -492,14 +489,20 @@ public:
 		return (int)typechart[type][piece->type];
 	}
 
-	virtual void defense_modifier(effectiveness& e, Piece* attacker) {
-		if (attacker->type == type) {
-			e = immune;
+	virtual void defense_modifier(move_data& data) {
+		if (data.attacker->type == type) {
+			data.matchup = immune;
 		}
 	}
 
 	virtual void revenge(move_data& data) {
-		if ((not data.do_miss) and data.attacker->type == type) {
+		if ((not holder->is_in_graveyard) and data.attacker->type == type) {
+			consume();
+		}
+	}
+
+	virtual void add_cosmetic(move_data& data) {
+		if (used) {
 			char buffer[256] = "\0";
 			strcat_s(buffer, holder->Class->name);
 			switch (type) {
@@ -517,7 +520,6 @@ public:
 				break;
 			}
 			game.add_textbox(buffer);
-			consume();
 		}
 	}
 
@@ -582,9 +584,9 @@ public:
 			return 2;
 	}
 
-	virtual void accuracy_modifier(double& miss_rate, Piece* defenser, effectiveness e) {
-		if (e.main == super_effective)
-			miss_rate = -INFINITY;
+	virtual void accuracy_modifier(move_data& data) {
+		if (data.matchup == super_effective)
+			data.miss_rate = -INFINITY;
 	}
 
 	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
@@ -616,8 +618,8 @@ public:
 
 	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
-	virtual void accuracy_modifier(double& miss_rate, Piece* defenser, effectiveness e) {
-		miss_rate = -INFINITY; // cannot miss
+	virtual void accuracy_modifier(move_data& data) {
+		data.miss_rate = -INFINITY; // cannot miss
 		consume();
 	}
 
@@ -658,8 +660,8 @@ public:
 	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 
-	virtual void evasion_modifier(double& miss_rate, Piece* attacker, effectiveness e) {
-		miss_rate = 1 - ((1 - miss_rate) * 1.1);
+	virtual void evasion_modifier(move_data& data) {
+		data.miss_rate = 1 - ((1 - data.miss_rate) * 1.1);
 	}
 
 	static int usefulness_tier(Piece* piece) {
@@ -686,6 +688,7 @@ const char* BrightPowder::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 };
 
 class LifeOrb : public PokeItem {
+	bool activated = false;
 public:
 	defctor(LifeOrb);
 
@@ -694,8 +697,8 @@ public:
 	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 
-	virtual void crit_modifier(double& crit_rate, Piece* defenser, effectiveness e) {
-		crit_rate *= 2;
+	virtual void crit_modifier(move_data& data) {
+		data.crit_rate *= 2;
 	}
 
 	static int usefulness_tier(Piece* piece) {
@@ -705,11 +708,17 @@ public:
 	virtual void after_move_effects(Piece* defenser, move_data& data) {
 		if (defenser != NULL and not data.suicide && ((double)game.RNG() / (double)game.RNG.max()) <= 0.1) {
 			holder->square->to_graveyard();
+			activated = true;
+			data.suicide = true;
+		}
+	}
+
+	virtual void add_cosmetic(move_data& data) {
+		if (activated) {
 			char buffer[256] = "\0";
 			strcat_s(buffer, holder->Class->name);
 			strcat_s(buffer, "\nDied to life orb");
 			game.add_textbox(buffer);
-			data.suicide = true;
 		}
 	}
 
@@ -748,19 +757,19 @@ public:
 		return 2;
 	}
 
-	virtual void crit_modifier(double& crit_rate, Piece* defenser, effectiveness e) {
-		if (crit_rate < 0)
-			crit_rate = -INFINITY;
+	virtual void crit_modifier(move_data& data) {
+		if (data.crit_rate < 0)
+			data.crit_rate = -INFINITY;
 		else
-			crit_rate = sqrt(crit_rate); // the equivallent of a roll with dnd advantage
+			data.crit_rate = sqrt(data.crit_rate); // the equivallent of a roll with dnd advantage
 	}
 
-	virtual void accuracy_modifier(double& miss_rate, Piece* defenser, effectiveness e) {
-		if (miss_rate < 0) {
-			miss_rate = -INFINITY;
+	virtual void accuracy_modifier(move_data& data) {
+		if (data.miss_rate < 0) {
+			data.miss_rate = -INFINITY;
 		}
 		else {
-			miss_rate = 1 - sqrt(1 - miss_rate); // the equivallent of a roll with dnd advantage
+			data.miss_rate = 1 - sqrt(1 - data.miss_rate); // the equivallent of a roll with dnd advantage
 		}
 	}
 
@@ -784,6 +793,7 @@ const char* LoadedDice::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 };
 
 class RockyHelmet : public PokeItem {
+	bool activated = false;
 public:
 	defctor(RockyHelmet);
 	
@@ -796,13 +806,19 @@ public:
 	}
 
 	virtual void revenge(move_data& data) {
-		if (not data.suicide && ((double)game.RNG() / (double)game.RNG.max()) < 1.0 / 6.0) {
+		if (holder->is_in_graveyard and not data.suicide && ((double)game.RNG() / (double)game.RNG.max()) < 1.0 / 6.0) {
 			data.attacker->square->to_graveyard();
+			activated = true;
+			data.suicide = true;
+		}
+	}
+
+	virtual void add_cosmetic(move_data& data) {
+		if (activated) {
 			char buffer[256] = "\0";
 			strcat_s(buffer, data.attacker->Class->name);
 			strcat_s(buffer, "\nDied to Rcky Hlmt");
 			game.add_textbox(buffer);
-			data.suicide = true;
 		}
 	}
 
@@ -843,10 +859,10 @@ public:
 		return 2;
 	}
 
-	virtual void crit_modifier(double& crit_rate, Piece* defenser, effectiveness matchup) {
-		for (move_data& const data : game.board.move_historic) {
-			if (data.attacker->color == holder->color) {
-				if (data.attacker == holder && data.defender != NULL) {
+	virtual void crit_modifier(move_data& data) {
+		for (move_data& const d : holder->board.move_historic) {
+			if (d.attacker->color == holder->color) {
+				if (d.attacker == holder && d.defender != NULL) {
 					nb_of_consecutives++;
 					if (nb_of_consecutives >= 5)
 						nb_of_consecutives = 5;
@@ -857,7 +873,7 @@ public:
 				break;
 			}
 		}
-		crit_rate *= nb_of_consecutives;
+		data.crit_rate *= nb_of_consecutives;
 	}
 
 	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
@@ -880,6 +896,7 @@ const char* Metronome::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 };
 
 class RedCard : public PokeItem {
+	bool activated = false;
 public:
 	static const bool RNG = false;
 
@@ -894,10 +911,20 @@ public:
 	}
 
 	virtual void revenge(move_data& data) {
-		if (data.move_again and not data.suicide) {
+		if (holder->is_in_graveyard and data.move_again and not data.suicide) {
 			data.move_again = false;
+			activated = true;
 			game.board.in_bonus_move = false;
-			data.attacker->base_move_to(*data.begin_square);
+			data.attacker->move_to(*data.begin_square);
+		}
+	}
+
+	virtual void add_cosmetic(move_data& data) {
+		if (activated) {
+			char buffer[256] = "\0";
+			strcat_s(buffer, data.attacker->Class->name);
+			strcat_s(buffer, "\nwas sent back.");
+			game.add_textbox(buffer);
 		}
 	}
 
@@ -920,8 +947,8 @@ const char* RedCard::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 	"", // ITALIAN
 };
 
-
 class StickyBarbs : public PokeItem {
+	bool activated;
 public:
 	defctor(StickyBarbs);
 
@@ -934,22 +961,32 @@ public:
 	}
 
 	virtual void revenge(move_data& data) {
-		data.attacker->item->consume();
-		data.attacker->item = this;
-		holder->update_sprite();
-		holder = data.attacker;
-		holder->update_sprite();
+		if (holder->is_in_graveyard) {
+			consume();
+			used = false;
+			data.attacker_item_slot->consume();
+			data.attacker->item = this;
+			holder = data.attacker;
+			holder->update_sprite();
+		}
 	}
 
 	virtual void after_move_effects(move_data& data) {
+		activated = false;
 		if ((not data.suicide) && (((double)game.RNG() / (double)game.RNG.max()) < 0.125)) {
 			holder->square->to_graveyard();
+			activated = true;
+			data.suicide = true;
+			data.move_again = false;
+		}
+	}
+
+	virtual void add_cosmetic(move_data& data) {
+		if (activated) {
 			char buffer[256] = "\0";
 			strcat_s(buffer, holder->Class->name);
 			strcat_s(buffer, "\nDied to StckyBrbs");
 			game.add_textbox(buffer);
-			data.suicide = true;
-			data.move_again = false;
 		}
 	}
 
@@ -1011,6 +1048,7 @@ const char* AssaultVest::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 };
 
 class ShedShell : public PokeItem {
+	bool activated;
 public:
 	static const bool RNG = false;
 
@@ -1044,22 +1082,22 @@ public:
 		return true;
 	}
 
-	virtual move_data move_to(Square& target) {
-		move_data data = holder->base_move_to(target);
-		char buffer[256] = "\0";
-		strcat_s(buffer, holder->Class->name);
-		strcat_s(buffer, "\nfled successfuly");
-		game.add_textbox(buffer);
-		consume(buffer);
-		return data;
-	}
-
 	virtual void after_move_effect(move_data& data) {
 		if (holder->Class != Knight::cls) {
 			Knight K = Knight(game.board, holder->color, data.begin_square, holder->type, NULL);
 			if (K.base_do_control(*data.target_square) and not data.cancel) {
 				consume();
 			}
+		}
+	}
+	
+	virtual void add_cosmetic(move_data& data) {
+		if (used) {
+			char buffer[256] = "\0";
+			strcat_s(buffer, holder->Class->name);
+			strcat_s(buffer, "\nfled successfuly");
+			game.add_textbox(buffer);
+			consume();
 		}
 	}
 
@@ -1096,8 +1134,8 @@ public:
 		return 2;
 	}
 
-	virtual void crit_modifier(double& crit_rate, Piece* defenser, effectiveness e) {
-		crit_rate *= 1.3;
+	virtual void crit_modifier(move_data& data) {
+		data.crit_rate *= 1.3;
 	}
 
 	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
@@ -1131,8 +1169,8 @@ public:
 		return 2;
 	}
 
-	virtual void accuracy_modifier(double& miss_rate, Piece* defenser, effectiveness e) {
-		miss_rate /= 2;
+	virtual void accuracy_modifier(move_data& data) {
+		data.miss_rate /= 2;
 	}
 
 	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
@@ -1274,9 +1312,9 @@ public:
 		return (piece->type == normal) ? 2 : 0;
 	}
 
-	virtual void attack_modifier(effectiveness& e, Piece* defenser) {
+	virtual void attack_modifier(move_data& data) {
 		if (holder->type == normal) {
-			e++;
+			data.matchup++;
 		}
 	}
 	
@@ -1339,7 +1377,7 @@ public:
 	}
 
 	virtual move_data move_to(Square& target) {
-		move_data data = holder->base_move_to(target);
+		move_data data = holder->move_to(target);
 		consume();
 		return data;
 	}
@@ -1366,6 +1404,7 @@ const char* LeppaBerry::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 };
 
 class BlackSludge : public PokeItem {
+	bool activated = false;
 public:
 	defctor(BlackSludge);
 
@@ -1377,14 +1416,20 @@ public:
 		return -(piece->type == poison);
 	}
 
-	virtual void after_move_effects(Piece* defenser, move_data& data) {
+	virtual void after_move_effects(move_data& data) {
 		if (holder->type != poison and ((double)game.RNG() / (double)game.RNG.max()) < 0.125) {
 			holder->square->to_graveyard();
+			activated = true;
+			data.suicide = true;
+		}
+	}
+
+	virtual void add_cosmetic(move_data& data) {
+		if (activated) {
 			char buffer[256] = "\0";
 			strcat_s(buffer, holder->Class->name);
 			strcat_s(buffer, "\nDied to\nBlackSludge");
 			game.add_textbox(buffer);
-			data.suicide = true;
 		}
 	}
 
@@ -1420,13 +1465,13 @@ public:
 		return (typechart[piece->type][rock] == not_very_effective) ? 2 : 0;
 	}
 
-	virtual void attack_modifier(effectiveness& e, Piece* defenser) {
-		if (defenser != NULL and defenser->type == rock) {
-			if (e.main == not_very_effective) {
-				e++;
+	virtual void attack_modifier(move_data& data) {
+		if (data.defender != NULL and data.defender->type == rock) {
+			if (data.matchup == not_very_effective) {
+				data.matchup++;
 			}
 			else {
-				e.intensity++;
+				data.matchup.intensity++;
 			}
 		}
 	}
@@ -1462,9 +1507,9 @@ public:
 		return (piece->Class == Pawn::cls) ? (piece->type == typeless) + 2 * (piece->type == electric) : 0;
 	}
 	
-	virtual void crit_modifier(double& crit_rate, Piece* defenser) {
+	virtual void crit_modifier(move_data& data) {
 		if (holder->type == electric and holder->Class == Pawn::cls)
-			crit_rate *= 3;
+			data.crit_rate *= 3;
 	}
 
 	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
@@ -1502,13 +1547,13 @@ public:
 		return 2 * (piece->Class == Pawn::cls);
 	}
 
-	virtual void defense_modifier(effectiveness& e, Piece* attacker) {
+	virtual void defense_modifier(move_data& data) {
 		if (holder->Class == Pawn::cls) {
-			if (e == super_effective) {
-				e--;
+			if (data.matchup == super_effective) {
+				data.matchup--;
 			}
 			else {
-				e.intensity--;
+				data.matchup.intensity--;
 			}
 		}
 	}

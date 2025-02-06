@@ -70,6 +70,8 @@ void ButtonCollection::draw() {
 #endif
 	for (Node* current = first; current != NULL; current = tmp) {
 		tmp = current->next;
+		if (game.state == end_of_game)
+			PRINT_VAR(current->button);
 		if (current->button->is_active()) {
 			if (not current->button->currently_active) {
 				current->button->currently_active = true;
@@ -127,11 +129,14 @@ bool ButtonCollection::click(int mouse_button, double x, double y) {
 }
 
 void Button::kill() {
+	PRINT_DEBUG("kill " << this);
 	if (this == Button::pressed_button) {
 		Button::pressed_button = NULL;
 	}
 	ButtonCollection::Node* previous = NULL;
-	for (ButtonCollection::Node* current = collection->first; current != NULL; previous = current, current = current->next) {
+	ButtonCollection::Node* next = NULL;
+	for (ButtonCollection::Node* current = collection->first; current != NULL; previous = current, current = next) {
+		next = current->next;
 		if (current->button == this) {
 			if (previous == NULL) {
 				collection->first = current->next;
@@ -230,7 +235,7 @@ void EndOfGameButton::draw() {
 
 void EndOfGameButton::effect(int mouse_button, double, double) {
 	if (mouse_button == SDL_BUTTON_LEFT)
-		game.reset();
+		game.to_menu();
 }
 
 ExitGameButton::ExitGameButton(double x_, double y_) : Button(x_, y_, 1.0, 1.0) {
@@ -247,7 +252,7 @@ void ExitGameButton::draw() {
 
 void ExitGameButton::effect(int mouse_button, double, double) {
 	if (mouse_button == SDL_BUTTON_LEFT)
-		game.reset();
+		game.to_menu();
 }
 
 
@@ -571,7 +576,7 @@ TextBoxDisplay::TextBoxDisplay(const char* text, bool _is_first) : Button(5.0, 0
 	x = 5.0;
 	side = black;
 	y = 2.0;
-
+	PRINT_VAR(this);
 	strcpy_s(message, text);
 	is_first = _is_first;
 }
@@ -600,6 +605,7 @@ void TextBoxDisplay::destroy_all() {
 	if (next != NULL) {
 		next->destroy_all();
 	}
+	kill();
 	delete this;
 }
 
@@ -652,6 +658,7 @@ Button::update_return_code TextBoxDisplay::update() {
 			}
 			else {
 				game.active_textbox = next;
+				game.active_textbox->is_first = true;
 			}
 
 			delete this;
@@ -667,7 +674,7 @@ void TextBoxDisplay::draw() {
 }
 
 TextBoxDisplay::~TextBoxDisplay() {
-
+	PRINT_DEBUG("free " << this);
 }
 
 SkipBonusMoveButton::SkipBonusMoveButton(double x_, double y_) : Button(x_ - skip_button->w / 2.0 / TILE_SIZE, y_ - skip_button->h / 2.0 / TILE_SIZE, (double)skip_button->w / TILE_SIZE, (double)skip_button->h / TILE_SIZE) {

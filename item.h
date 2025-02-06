@@ -72,19 +72,20 @@ enum class item_id : short {
 
 // the property of an item can be both determined by virtual methods and with id for more specific effects
 class PokeItem {
+protected:
+	bool used;
 public:
 	ItemClass& cls;
 	static const bool RNG = true;
 
 	const item_id id;
-	const char* name;
 	const int priority;
 	Piece* holder;
 
 	PokeItem(Piece* piece, item_id id_, int prio, ItemClass& IC);
 	PokeItem(Piece* piece, ItemClass& IC);
 	
-	void consume(const char* txt = NULL);
+	void consume();
 	
 	static void draw(Surface dest, SDL_Rect* rect = NULL, anchor a = top_left) { ; }
 
@@ -97,17 +98,17 @@ public:
 	static int usefulness_tier(Piece* piece) { return 0; }
 
 	// called when attacking a piece
-	virtual void attack_modifier(effectiveness& e, Piece* defenser) {}
+	virtual void attack_modifier(move_data& data) {}
 
 	// called when a piece tries to kill you
-	virtual void defense_modifier(effectiveness& e, Piece* attacker) {}
+	virtual void defense_modifier(move_data& data) {}
 
 	// called after attack_modifier is called and defense_modifier of the opponent is called
-	virtual void accuracy_modifier(double& miss_rate, Piece* defenser, effectiveness matchup) {}
-	virtual void crit_modifier(double& crit_rate, Piece* defenser, effectiveness matchup) {}
+	virtual void accuracy_modifier(move_data& data) {}
+	virtual void crit_modifier(move_data& data) {}
 
 	// called after defense_modifier is called and defense_modifier of the opponent is called
-	virtual void evasion_modifier(double& miss_rate, Piece* attacker, effectiveness matchup) {}
+	virtual void evasion_modifier(move_data& data) {}
 
 	// called when a piece cannot move through base rules to target to know whether the item allow the move
 	virtual bool is_move_allowed(Square& target) { return false; }
@@ -128,7 +129,16 @@ public:
 	// do whatever you want to the promotion process in this method
 	virtual bool prepare_promotion() { return false; }
 
+	virtual void add_cosmetic(move_data& data) { ; }
 };
+
+#define HOLDS_SAFETY_GOOGLES(piece) (piece != NULL and piece->item != NULL and piece->item->id == item_id::safety_googles)
+#define HOLDS_PROTECTIVE_PADS(piece) (piece != NULL and piece->item != NULL and piece->item->id == item_id::protective_pads)
+#define HOLDS_HONEY(piece) (piece != NULL and piece->item != NULL and piece->item->id == item_id::honey)
+
+#define IS_SAFETY_GOOGLES(item) ((item) != NULL and (item)->id == item_id::safety_googles)
+#define IS_PROTECTIVE_PADS(item) ((item) != NULL and (item)->id == item_id::protective_pads)
+#define IS_HONEY(item) ((item) != NULL and (item)->id == item_id::honey)
 
 
 

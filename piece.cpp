@@ -37,6 +37,13 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 	begin_square = attacker->square;
 	target_square = target_square_;
 
+	miss_rate = attacker->board.miss_rate;
+	crit_rate = attacker->board.crit_rate;
+
+	attacker_item_slot = attacker->item;
+	if (defender != NULL)
+		defenser_item_slot = defender->item;
+
 	if (not game.with_typing or defender == NULL)
 		return;
 
@@ -45,49 +52,38 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 
 	Board& board = attacker->board;
 
-	double crit_rate = board.crit_rate;
-	double miss_rate = board.miss_rate;
 
-	if (attacker->item != NULL and (defender->item == NULL or defender->item->id != item_id::safety_googles)) {
-		if (defender->item != NULL and (attacker->item == NULL or attacker->item->id != item_id::protective_pads)) {
+	if (attacker->item != NULL and not IS_SAFETY_GOOGLES(defenser_item_slot)) {
+		if (defender->item != NULL and not IS_PROTECTIVE_PADS(attacker_item_slot)) {
 			if (attacker->item->priority >= defender->item->priority) {
-				attacker->item->attack_modifier(matchup, defender);
-				defender->item->defense_modifier(matchup, attacker);
+				attacker_item_slot->attack_modifier(self);
+				defenser_item_slot->defense_modifier(self);
 
-				if (attacker->item != NULL)
-					attacker->item->crit_modifier(crit_rate, defender, matchup);
+				attacker_item_slot->crit_modifier(self);
 				
-				if (attacker->item != NULL)
-					attacker->item->accuracy_modifier(miss_rate, defender, matchup);
-				if (defender->item != NULL)
-					defender->item->evasion_modifier(miss_rate, attacker, matchup);
+				attacker_item_slot->accuracy_modifier(self);
+				defenser_item_slot->evasion_modifier(self);
 			}
 			else {
-				defender->item->defense_modifier(matchup, attacker);
-				attacker->item->attack_modifier(matchup, defender);
+				defenser_item_slot->defense_modifier(self);
+				defenser_item_slot->attack_modifier(self);
 				
-				if (attacker->item != NULL)
-					attacker->item->crit_modifier(crit_rate, defender, matchup);
+				attacker_item_slot->crit_modifier(self);
 
-				if (defender->item != NULL)
-					defender->item->evasion_modifier(miss_rate, attacker, matchup);
-				if (attacker->item != NULL)
-					attacker->item->accuracy_modifier(miss_rate, defender, matchup);
+				defenser_item_slot->evasion_modifier(self);
+				attacker_item_slot->accuracy_modifier(self);
 			}
 		}
 		else {
-			attacker->item->attack_modifier(matchup, defender);
-			if (attacker->item != NULL)
-				attacker->item->crit_modifier(crit_rate, defender, matchup);
-			if (attacker->item != NULL)
-				attacker->item->accuracy_modifier(miss_rate, defender, matchup);
+			attacker_item_slot->attack_modifier(self);
+			attacker_item_slot->crit_modifier(self);
+			attacker_item_slot->accuracy_modifier(self);
 		}
 	}
 	else {
-		if (defender->item != NULL and (attacker->item == NULL or attacker->item->id != item_id::protective_pads)) {
-			defender->item->defense_modifier(matchup, attacker);
-			if (defender->item != NULL)
-				defender->item->evasion_modifier(miss_rate, attacker, matchup);
+		if (defender->item != NULL and not IS_PROTECTIVE_PADS(attacker_item_slot)) {
+			defenser_item_slot->defense_modifier(self);
+			defenser_item_slot->evasion_modifier(self);
 		}
 	}
 
@@ -249,17 +245,21 @@ bool Piece::base_do_control(Square& target_square) { return false; }
 move_data Piece::move_to(Square& square) {
 	
 	
-	move_data data = base_move_to(square);
+	move_data data;
 
-	if (item != NULL and (data.defender == NULL or data.defender->item == NULL or data.defender->item->id != item_id::safety_googles)) {
-		PRINT_DEBUG("effet");
-		item->after_move_effects(data);
+	if (item == NULL or can_move_to(square, ignore_item)) {
+		data = base_move_to(square);
+	}
+	else {
+		data = item->move_to(square);
 	}
 
-	PRINT_DEBUG("3443")
-	if ((data.defender != NULL and data.defender->item != NULL) and (item == NULL or item->id != item_id::protective_pads)) {
-		PRINT_DEBUG("revenge");
-		data.defender->item->revenge(data);
+	if (data.attacker_item_slot != NULL and not IS_SAFETY_GOOGLES(data.defenser_item_slot)) {
+		data.attacker_item_slot->after_move_effects(data);
+	}
+
+	if (data.defenser_item_slot != NULL and not IS_PROTECTIVE_PADS(data.attacker_item_slot)) {
+		data.defenser_item_slot->revenge(data);
 	}
 
 	return data;
@@ -307,39 +307,33 @@ move_data Piece::base_move_to(Square& target_square) {
 	return data;
 }
 
-bool Piece::can_move_to(Square& target) {
-#define have_honey(piece) ((piece) != NULL and (piece)->color != color and (piece)->item != NULL and (piece)->item->id == item_id::honey)
+bool Piece::can_move_to(Square& target, Uint64 flags) {
 	Piece* adv = target.piece;
-	static bool check_for_honey = true;
 
-	if (check_for_honey and type == bug and (item == NULL or item->id != item_id::safety_googles) and not have_honey(adv)) {
+	if ((flags & ignore_honey) != 0 and type == bug and (item == NULL or item->id != item_id::safety_googles) and not HOLDS_HONEY(adv)) {
 		for (Square& square : board) {
-			check_for_honey = false;
-			if (can_move_to(square) or (item != NULL and item->is_move_allowed(square))) {
-				if (have_honey(square.piece)) {
+			if (can_move_to(square, flags|ignore_honey) or (item != NULL and item->is_move_allowed(square))) {
+				if (HOLDS_HONEY(square.piece)) {
 					// congratulation, you are a bug type that can reach opposing honey
-					check_for_honey = true;
 					return false;
 				}
 			}
-			check_for_honey = true;
 		}
 	}
 	bool base = base_can_move_to(target);
 
-	static bool check_for_is_move_disallowed = true;
-	static bool check_for_is_move_allowed = true;
+	static bool check_for_is_move_disallowed = true, check_for_is_move_allowed = true;
 
-	if (item != NULL) {
+	if (item != NULL and (flags & ignore_item) != 0) {
 		if (base) {
-			if (check_for_is_move_disallowed) {
+			if ((flags & ignore_movement_restriction) != 0 and check_for_is_move_allowed) {
 				check_for_is_move_disallowed = false;
 				base = not item->is_move_disallowed(target);
 				check_for_is_move_disallowed = true;
 			}
 		}
 		else {
-			if (check_for_is_move_allowed) {
+			if ((flags & ignore_movement_bonus) != 0 and check_for_is_move_allowed) {
 				check_for_is_move_allowed = false;
 				base = item->is_move_allowed(target);
 				check_for_is_move_allowed = true;

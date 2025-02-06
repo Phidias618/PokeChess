@@ -256,6 +256,7 @@ class TextBoxDisplay : public Button {
 	static const short char_width = 16;
 	static const short y_pixel_increment = 32;
 public:
+
 	static const int duration = FPS / 2;
 
 	void destroy_all();

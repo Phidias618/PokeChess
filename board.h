@@ -8,6 +8,7 @@ class BoardIterator;
 #define self (*this)
 
 #include <forward_list>
+#include <stack>
 
 #include "SDL+.h"
 
@@ -56,7 +57,6 @@ public:
 
 class File {
 private:
-	Board* board;
 	//static Piece *trash;
 	Square data[8];
 	File();
@@ -91,6 +91,8 @@ public:
 	
 	Piece* white_graveyard[16];
 	Piece* black_graveyard[16];
+
+	std::stack<PokeItem*> item_graveyard;
 
 	Color light_square_color;
 	Color dark_square_color;
