@@ -552,8 +552,8 @@ const char* ImmunityItem<electric>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 
 template<typing type>
 const char* ImmunityItem<type>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	std::string(" - Utilisable une unique fois.\n - Donne une immunité contre le type ").append(type_str[(int)LANGUAGE::FRENCH][type]).append(".\n").c_str(), // FRENCH
-	std::string(" - One time use.\n - Gives an immunity to ").append(type_str[(int)LANGUAGE::ENGLISH][type]).append(".\n").c_str(), // ENGLISH
+	str_to_char(std::string(" - Utilisable une unique fois.\n - Donne une immunité contre le type ").append(type_str[(int)LANGUAGE::FRENCH][type]).append(".\n")), // FRENCH
+	str_to_char(std::string(" - One time use.\n - Gives an immunity to ").append(type_str[(int)LANGUAGE::ENGLISH][type]).append(".\n")), // ENGLISH
 	"", // GERMAN
 	"", // SPANISH
 	"", // ITALIAN
