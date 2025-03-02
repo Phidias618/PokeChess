@@ -84,7 +84,13 @@ public:
 
 	PokeItem(Piece* piece, item_id id_, int prio, ItemClass& IC);
 	PokeItem(Piece* piece, ItemClass& IC);
-	
+
+	virtual ~PokeItem();
+
+	virtual void remove();
+
+	virtual void update_pokeicon() {}
+
 	void consume();
 	
 	static void draw(Surface dest, SDL_Rect* rect = NULL, anchor a = top_left) { ; }
@@ -124,7 +130,7 @@ public:
 	virtual void revenge(move_data& data) {}
 
 	// called when getting the sprites for the promotion selection (on dummy pieces) and after promoting
-	virtual void promote(bool not_dummy = true) {}
+	virtual void promote() {}
 	// returns true to indicate the item will handle part of the promotion process (such as the creation of buttons to promote any piece)
 	// do whatever you want to the promotion process in this method
 	virtual bool prepare_promotion() { return false; }

@@ -257,25 +257,24 @@ void ExitGameButton::effect(int mouse_button, double, double) {
 
 
 PromotionButton::PromotionButton(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> constructor, double tile_x_, double tile_y_) :
-	Button(tile_x_, tile_y_, 1.0, 1.0), piece_constructor(constructor) {
-	sprite = Surface::createRGBA(TILE_SIZE, TILE_SIZE);
+	Button(tile_x_, tile_y_, 1.0, 1.0), piece_constructor(constructor)
+{
+
 }
 
 void PromotionButton::resize() {
-	sprite = Surface::createRGBA(TILE_SIZE, TILE_SIZE);
-
-	Piece* piece = game.promoting_piece;
-	Piece* temp = piece_constructor(game.board, piece->color, piece->square, piece->type, piece->item);
-	SDL_Rect r(0, 0, TILE_SIZE, TILE_SIZE);
-	sprite.blit(temp->sprite, &r, NULL);
-	delete temp;
+	activate();
 }
 
 void PromotionButton::activate() {
 	Piece* piece = game.promoting_piece;
 	Piece* temp = piece_constructor(game.board, piece->color, piece->square, piece->type, piece->item);
-	SDL_Rect r(0, 0, TILE_SIZE, TILE_SIZE);
-	sprite.blit(temp->sprite, &r, NULL);
+	if (temp->item != NULL) {
+		temp->item->holder = temp;
+		temp->item->promote();
+		piece->item->holder = piece;
+	}
+	sprite = temp->sprite;
 	delete temp;
 }
 
@@ -292,9 +291,11 @@ void PromotionButton::effect(int mouse_button, double, double) {
 	Square* square = piece->square;
 	PokeItem* item = piece->item;
 	square->piece = piece_constructor(game.board, piece->color, square, piece->type, piece->item);
-	if (item != NULL)
-		item->holder = square->piece;
-	
+
+	if (square->piece->item) {
+		square->piece->item->holder = square->piece;
+		square->piece->item->promote();
+	}
 	delete piece;
 
 	game.board.last_move_data.attacker = square->piece;
@@ -463,12 +464,14 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 	std::mt19937 gen(rd());
 
 	if (game.type_selection) {
+		game.selected_type = typeless;
+		game.is_holding_something = false;
 		typing list[18];
-		for (typing t = normal; t <= fairy; t++) {
+		iter_typing(t) {
 			list[t] = t;
 		}
 
-		std::shuffle(&list[normal], &list[fairy], gen);
+		std::shuffle(&list[normal], &list[fairy]+1, gen);
 
 		if (game.board.active_player == white)
 			for (int i = 0; i < 16; i++) {
@@ -515,6 +518,7 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 			for (ItemClass* Item : list) {
 				if (Item->type == normal_item and (game.with_RNG or not Item->is_RNG_dependant) and Item->is_avaible) {
 					Item->is_avaible = false;
+					piece->set_item(NULL);
 					piece->set_item((*Item)(piece));
 					x++;
 					if (x == 8) {

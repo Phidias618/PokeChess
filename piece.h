@@ -32,6 +32,8 @@ class King;
 
 
 
+
+
 struct move_data {
 	move_data() {
 		matchup = neutral;
@@ -92,6 +94,9 @@ class PieceClass {
 private:
 	std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> constructor;
 public:
+	std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> base_promotion_constructor;
+
+
 	PieceClass();
 
 	PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> constructor, int id, const char* const name);
@@ -109,8 +114,34 @@ public:
 #include "item.h"
 #include "board.h"
 
+struct PokemonIcon {
+private:
+	short x, y;
+public:
+	inline void draw(Surface surface, int x_dest, int y_dest) {
+		if (x >= 0 and y >= 0) {
+			SDL_Rect dest(x_dest, y_dest);
+			SDL_Rect area(x * TILE_SIZE * 3 / 4, y * TILE_SIZE * 3 / 4, TILE_SIZE * 3 / 4, TILE_SIZE * 3 / 4);
+			surface.blit(pokemon_icons, &dest, &area, top_left);
+		}
+	}
 
+	inline PokemonIcon(short _x, short _y) {
+		x = _x;
+		y = _y;
+	}
 
+	PokemonIcon(Piece const* const piece);
+
+	inline PokemonIcon() {
+		x = y = -1;
+	}
+
+	// returns whether it holds a valid sprite or not
+	inline operator bool() {
+		return x >= 0 and y >= 0;
+	}
+};
 
 bool operator==(void* other, const PieceClass Class);
 
@@ -123,6 +154,7 @@ enum move_flags_mask {
 
 class Piece {
 	static PieceClass __cls;
+	PokemonIcon pokeicon;
 public:
 	static PieceClass* const cls;
 	PieceClass* const Class;
@@ -130,8 +162,9 @@ public:
 	typing type;
 	const piece_color color;
 	
-	bool has_already_move : 1;
-	bool is_in_graveyard : 1;
+	bool has_already_move : 1 = false;
+	bool is_in_graveyard : 1 = false;
+	bool evolved : 1 = false;
 	
 	PokeItem* item;
 
@@ -166,9 +199,15 @@ public:
 	__declspec(property(get = get_x)) int x;
 	__declspec(property(get = get_y)) int y;
 
+	inline bool has_icon() {
+		return static_cast<bool>(pokeicon);
+	}
+
 	void set_type(typing new_type);
 
 	void set_item(PokeItem* new_item);
+
+	void set_pokeicon(PokemonIcon pokeicon=PokemonIcon(-1, -1));
 
 	void resize_sprite();
 	void update_sprite();

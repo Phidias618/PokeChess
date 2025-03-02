@@ -503,7 +503,6 @@ Piece* constructor(Board& board_, piece_color color_, Square* sq, typing type_ =
 	return new T(board_, color_, sq, type_, item);
 }
 
-
 void Game::to_promotion(Piece* promoting_pawn) {
 	promoting_piece = promoting_pawn;
 	
@@ -514,10 +513,10 @@ void Game::to_promotion(Piece* promoting_pawn) {
 
 	buttons->clear();
 	if (promoting_pawn->item == NULL or not promoting_pawn->item->prepare_promotion()) {
-		buttons->add(new PromotionButton(*Queen::cls, 7.0, 5.5));
-		buttons->add(new PromotionButton(*Rook::cls, 8.0, 5.5));
-		buttons->add(new PromotionButton(*Bishop::cls, 9.0, 5.5));
-		buttons->add(new PromotionButton(*Knight::cls, 10.0, 5.5));
+		buttons->add(new PromotionButton(Queen::cls->base_promotion_constructor, 7.0, 5.5));
+		buttons->add(new PromotionButton(Rook::cls->base_promotion_constructor, 8.0, 5.5));
+		buttons->add(new PromotionButton(Bishop::cls->base_promotion_constructor, 9.0, 5.5));
+		buttons->add(new PromotionButton(Knight::cls->base_promotion_constructor, 10.0, 5.5));
 	}
 
 	

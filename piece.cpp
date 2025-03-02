@@ -17,10 +17,7 @@ set_cls(Knight, 3, "Knight");
 set_cls(Rook, 4, "Rook");
 set_cls(Pawn, 5, "Pawn");
 
-
-#undef __set_cls
 #undef set_cls
-
 
 #include "game.h"
 #include "board.h"
@@ -123,7 +120,13 @@ PieceClass::PieceClass() : constructor(NULL), id(-2), name("") {
 }
 
 PieceClass::PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> ctor, int id_, const char* const _name) : id(id_), constructor(ctor), name(_name) {
-	;
+	base_promotion_constructor =
+		[this](Board& b, piece_color c, Square* sq, typing t, PokeItem* i) -> Piece* {
+			Piece* res = constructor(b, c, sq, t, i);
+			res->has_already_move = res->evolved = true;
+			res->set_pokeicon(PokemonIcon(res));
+			return res;
+		};
 }
 
 PieceClass& PieceClass::operator=(const PieceClass& other) {
@@ -147,6 +150,14 @@ Piece* PieceClass::operator()(Board& board, piece_color color, Square* sq, typin
 	return NULL;
 }
 
+PokemonIcon::PokemonIcon(Piece const* const piece) {
+	x = 1 + 2 * (piece->Class->id + piece->evolved * 5) + piece->color;
+	y = (short)piece->type + 1;
+	if (y == 0) {
+		x = y = -1;
+	}
+	PRINT_DEBUG(x << ' ' << y);
+}
 
 
 
@@ -178,6 +189,11 @@ void Piece::update_sprite() {
 	SDL_Rect area(TILE_SIZE * Class->id, TILE_SIZE * color, TILE_SIZE, TILE_SIZE);
 
 	sprite.blit(sprite_sheet, &dest, &area);
+
+	if (pokeicon) {
+		pokeicon.draw(sprite, TILE_SIZE/8, TILE_SIZE/8);
+	}
+
 	dest = { 5 * TILE_SIZE / 8, 5 * TILE_SIZE / 8, 0, 0 };
 	if (type != typeless)
 		sprite.blit(typing_icon[type].scale_to(TILE_SIZE / 3, TILE_SIZE / 3, true), &dest, NULL);
@@ -186,19 +202,33 @@ void Piece::update_sprite() {
 		dest = { 0, TILE_SIZE - ITEM_MINI_SIZE, 0, 0 };
 		(item->cls).draw(sprite, &dest, mini);
 	}
+
+	
 }
 
 void Piece::set_type(typing new_type) {
 	type = new_type;
-	update_sprite();
+	set_pokeicon(PokemonIcon(this));
+	if (item != NULL)
+		item->update_pokeicon();
 }
 
 void Piece::set_item(PokeItem* new_item) {
-	if (item != NULL)
-		delete item;
+	if (item != NULL) {
+		auto temp = item;
+		item = NULL;
+		delete temp;
+	}
 	item = new_item;
-	if (item != NULL)
+	if (item != NULL) {
 		item->holder = this;
+	}
+	update_sprite();
+	
+}
+
+void Piece::set_pokeicon(PokemonIcon icon) {
+	pokeicon = icon;
 
 	update_sprite();
 }

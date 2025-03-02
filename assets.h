@@ -21,6 +21,8 @@ extern Surface item_sheet_mini;
 extern Surface phone_frame;
 extern Surface rotom_dex;
 
+extern Surface pokemon_icons;
+
 extern Surface right_arrow;
 
 //extern Surface check_mark;

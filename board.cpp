@@ -117,8 +117,10 @@ File::File(Board* b, int y){
 auto File::init(Board* b, int x) -> void {
 	for (int y = 0; y < 8; y++) {
 		data[y].board = b;
-		((short*)&data[y])[4] = x;
-		((short*)&data[y])[5] = y;
+		const_cast<short&>(data[y].x) = x;
+		const_cast<short&>(data[y].y) = y;
+		//((short*)&data[y])[4] = x;
+		//((short*)&data[y])[5] = y;
 	}
 }
 

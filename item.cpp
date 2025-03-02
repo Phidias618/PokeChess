@@ -1,3 +1,5 @@
+#include <array>
+
 #include "item.h"
 #include "game.h"
 #include "board.h"
@@ -9,12 +11,23 @@ move_data PokeItem::move_to(Square& target) {
 
 PokeItem::PokeItem(Piece* piece, item_id id_, int prio, ItemClass& IC) : id(id_), holder(piece), priority(prio), cls(IC) {
 	used = false;
+	holder = piece;
 }
 
-PokeItem::PokeItem(Piece* piece, ItemClass& IC) : id(item_id::basic), holder(piece), priority(0), cls(IC) {
+PokeItem::PokeItem(Piece* piece, ItemClass& IC) : id(item_id::basic), priority(0), cls(IC) {
 	used = false;
 }
 
+PokeItem::~PokeItem() {
+	holder->set_pokeicon(PokemonIcon(holder));
+	holder->set_item(NULL);
+}
+
+void PokeItem::remove() {
+	holder->item = NULL;
+	holder->set_pokeicon(PokemonIcon(holder));
+	holder->update_sprite();
+}
 
 void PokeItem::consume() {
 	used = true;
@@ -147,10 +160,22 @@ class EvolutionStone : public PokeItem {
 public:
 	static const bool RNG = false;
 	EvolutionStone(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::evolution_stone, 0, IC) {
-		;
+		
+	}
+
+	virtual void update_pokeicon() {
+		if (holder->type == old_type)
+			holder->set_pokeicon(PokemonIcon(21 + holder->color, 1 + new_type));
+	}
+
+	virtual void remove() {
+		holder->set_pokeicon(PokemonIcon(holder));
+		holder = NULL;
 	}
 
 	defdraw(0, new_type);
+
+	
 
 	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
@@ -158,21 +183,28 @@ public:
 		return piece->Class == Pawn::cls && piece->type == old_type;
 	}
 
+#define ctor(Class) [](Board& b, piece_color c, Square* sq, typing t, PokeItem* i) -> Piece* { \
+	Piece* piece = new Class(b, c, sq, new_type, i); \
+	piece->has_already_move = piece->evolved = true; \
+	piece->set_pokeicon(PokemonIcon(23 + piece->color, 1 + new_type)); \
+	return piece; \
+}
+
 	virtual bool prepare_promotion() {
 		if (holder->type == old_type) {
-#define ctor(Class) [](Board& b, piece_color color, Square* sq, typing type, PokeItem* item) -> Piece* { return new Class(b, color, sq, new_type, NULL); }
+
 			game.buttons->add(new PromotionButton(ctor(Queen), 7.0, 5.5));
 			game.buttons->add(new PromotionButton(ctor(Rook), 8.0, 5.5));
 			game.buttons->add(new PromotionButton(ctor(Bishop), 9.0, 5.5));
 			game.buttons->add(new PromotionButton(ctor(Knight), 10.0, 5.5));
-#undef ctor
+
 			return true;
 		}
 		return false;
-
 	}
 
-	virtual void promote(bool not_dummy=true) {
+#undef ctor
+	virtual void promote() {
 		if (holder->type == new_type) {
 			consume();
 		}
@@ -189,7 +221,7 @@ const char* EvolutionStone<t1, t2>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 	evolution_stone_names[4][t2],
 };
 
-constexpr const char* str_to_char(std::string str) {
+constexpr const char* to_c_str(std::string str) {
 	char* buffer = new char[str.length()+1];
 	int i = 0;
 	for (char c : str) {
@@ -201,9 +233,9 @@ constexpr const char* str_to_char(std::string str) {
 
 template<typing t1, typing t2>
 const char* EvolutionStone<t1, t2>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	str_to_char(std::string(" - Uniquement pour les pions.\n\
+	to_c_str(std::string(" - Uniquement pour les pions.\n\
  - Si l'utilisateur est de type ").append(type_str[(int)LANGUAGE::FRENCH][t1]).append(", il deviendra de type ").append(type_str[(int)LANGUAGE::FRENCH][t2]).append(" en évoluant.\n")), // FRENCH
-	str_to_char(std::string(" - Only for pawns.\n\
+	to_c_str(std::string(" - Only for pawns.\n\
  - Makes ").append(type_str[(int)LANGUAGE::ENGLISH][t1]).append(" types, evolve into a ").append(type_str[(int)LANGUAGE::ENGLISH][t2]).append(" type.\n")), // ENGLISH
 	"", // GERMAN
 	"", // SPANISH
@@ -358,9 +390,11 @@ const char* resistance_berry_names[(int)LANGUAGE::NB_OF_LANGUAGE][18] = {
 template <typing type>
 class ResistanceBerry : public PokeItem {
 public:
+	static_assert(type != typeless);
+
 	static const bool RNG = false;
 	ResistanceBerry(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::resistance_berry, -1, IC) {
-		static_assert(type != typeless);
+	
 	}
 
 	defdraw(1, type);
@@ -403,8 +437,8 @@ const char* ResistanceBerry<type>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 
 template<typing type>
 const char* ResistanceBerry<type>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	str_to_char(std::string(" - Retire une faiblesse contre le type ").append(type_str[(int)LANGUAGE::FRENCH][type]).append(".\n")), // FRENCH
-	str_to_char(std::string(" - Removes a ").append(type_str[(int)LANGUAGE::ENGLISH][type]).append(" type weakness.\n")), // ENGLISH
+	to_c_str(std::string(" - Retire une faiblesse contre le type ").append(type_str[(int)LANGUAGE::FRENCH][type]).append(".\n")), // FRENCH
+	to_c_str(std::string(" - Removes a ").append(type_str[(int)LANGUAGE::ENGLISH][type]).append(" type weakness.\n")), // ENGLISH
 	"", // GERMAN
 	"", // SPANISH
 	"", // ITALIAN
@@ -552,8 +586,8 @@ const char* ImmunityItem<electric>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 
 template<typing type>
 const char* ImmunityItem<type>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	str_to_char(std::string(" - Utilisable une unique fois.\n - Donne une immunité contre le type ").append(type_str[(int)LANGUAGE::FRENCH][type]).append(".\n")), // FRENCH
-	str_to_char(std::string(" - One time use.\n - Gives an immunity to ").append(type_str[(int)LANGUAGE::ENGLISH][type]).append(".\n")), // ENGLISH
+	to_c_str(std::string(" - Utilisable une unique fois.\n - Donne une immunité contre le type ").append(type_str[(int)LANGUAGE::FRENCH][type]).append(".\n")), // FRENCH
+	to_c_str(std::string(" - One time use.\n - Gives an immunity to ").append(type_str[(int)LANGUAGE::ENGLISH][type]).append(".\n")), // ENGLISH
 	"", // GERMAN
 	"", // SPANISH
 	"", // ITALIAN
@@ -964,7 +998,8 @@ public:
 		if (holder->is_in_graveyard) {
 			consume();
 			used = false;
-			data.attacker_item_slot->consume();
+			if (data.attacker_item_slot != NULL)
+				data.attacker_item_slot->consume();
 			data.attacker->item = this;
 			holder = data.attacker;
 			holder->update_sprite();
@@ -1498,6 +1533,12 @@ class LightBall : public PokeItem {
 public:
 	defctor(LightBall);
 
+	virtual void update_pokeicon() {
+		if (holder->type == electric and holder->Class == Pawn::cls) {
+			holder->set_pokeicon(PokemonIcon(25 + holder->color, 1 + electric));
+		}
+	}
+
 	defdraw(3, electric);
 
 	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
@@ -1507,8 +1548,14 @@ public:
 	}
 	
 	virtual void crit_modifier(move_data& data) {
-		if (holder->type == electric and holder->Class == Pawn::cls)
+		if (holder->type == electric and (holder->Class == Pawn::cls or holder->evolved))
 			data.crit_rate *= 3;
+	}
+
+	void promote() {
+		if (holder->type == electric) {
+			holder->set_pokeicon(PokemonIcon(27 + 2 * holder->Class->id + holder->color, 1 + electric));
+		}
 	}
 
 	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
@@ -1611,12 +1658,20 @@ const char* Baguette::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 	" - Una baguette.\n", // ITALIAN
 };
 
-class LeadersCrest : public PokeItem {
+
+template<typing t1, typing t2>
+class KingPromotionItem : public PokeItem {
 public:
 	static const bool RNG = false;
-	defctor(LeadersCrest);
+	KingPromotionItem(Piece* piece, ItemClass& IC) : PokeItem(piece, IC) {
+	}
+	
+	virtual void update_pokeicon() {
+		if (holder->Class == Pawn::cls and (holder->type == t1 or holder->type == t2))
+			holder->set_pokeicon(PokemonIcon(25 + holder->color, 1 + holder->type));
+	}
 
-	defdraw(2, steel);
+	defdraw(2, t1);
 
 	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
@@ -1624,31 +1679,39 @@ public:
 
 
 	static int usefulness_tier(Piece* piece) {
-		return (piece->Class == Pawn::cls) ? (piece->type == typeless) + 2 * (piece->type == steel or piece->type == dark) : 0;
+		return (piece->Class == Pawn::cls) ? (piece->type == typeless) + 2 * (piece->type == t1 or piece->type == t2) : 0;
 	}
 
+#define ctor(Class) [](Board& b, piece_color color, Square* sq, typing type, PokeItem* item) -> Piece* { \
+	Piece* piece = new Class(b, color, sq, type, item); \
+	piece->has_already_move = piece->evolved = true; \
+	piece->set_pokeicon(PokemonIcon(27 + 2 * Class::cls->id + piece->color, 1 + piece->type)); \
+	return piece; \
+}
+
 	virtual bool prepare_promotion() {
-		if (holder->type == dark or holder->type == steel) {
-#define ctor(Class) [](Board& b, piece_color color, Square* sq, typing type, PokeItem* item) -> Piece* { return new Class(b, color, sq, type, NULL); }
+		if (holder->type == t1 or holder->type == t2) {
+
 			game.buttons->add(new PromotionButton(ctor(King), 6.5, 5.5));
-			game.buttons->add(new PromotionButton(*Queen::cls, 7.5, 5.5));
-			game.buttons->add(new PromotionButton(*Rook::cls, 8.5, 5.5));
-			game.buttons->add(new PromotionButton(*Bishop::cls, 9.5, 5.5));
-			game.buttons->add(new PromotionButton(*Knight::cls, 10.5, 5.5));
-#undef ctor
+			game.buttons->add(new PromotionButton(ctor(Queen), 7.5, 5.5));
+			game.buttons->add(new PromotionButton(ctor(Rook), 8.5, 5.5));
+			game.buttons->add(new PromotionButton(ctor(Bishop), 9.5, 5.5));
+			game.buttons->add(new PromotionButton(ctor(Knight), 10.5, 5.5));
+
 			return true;
 		}
 		return false;
 	}
+#undef ctor
 
-	virtual void promote(bool) {
+	virtual void promote() {
 		if (holder->Class == King::cls) {
 			consume();
 		}
 	}
 };
 
-const char* LeadersCrest::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+const char* KingPromotionItem<steel, dark>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 	"Emblème du Général", // FRENCH
 	"Leader’s Crest", // ENGLISH
 	"Anführersymbol", // GERMAN
@@ -1656,11 +1719,20 @@ const char* LeadersCrest::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 	"Simbolo del capo", // ITALIAN
 };
 
-const char* LeadersCrest::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Uniquement pour les pions de type acier/ténèbres.\n\
- - Permet la promotion en Roi.\n", // FRENCH
-	" - Only for steel/dark type pawns.\n\
- - Allow promotion to King.\n", // ENGLISH
+const char* KingPromotionItem<psychic, water>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	"Roche Royale", // FRENCH
+	"King's rock", // ENGLISH
+	"", // GERMAN
+	"", // SPANISH
+	"", // ITALIAN
+};
+
+template<typing t1, typing t2>
+const char* KingPromotionItem<t1, t2>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	to_c_str(std::string(" - Uniquement pour les pions de type ").append(type_str[0][t1]).append((t1 != t2) ? std::string("/").append(type_str[0][t2]) : "").append(".\n\
+ - Permet la promotion en Roi.\n")), // FRENCH
+	to_c_str(std::string(" - Only for ").append(type_str[1][t1]).append((t1 != t2) ? std::string("/").append(type_str[1][t2]) : "").append(" type pawns.\n\
+ - Allow promotion to King.\n")), // ENGLISH
 	"", // GERMAN
 	"", // SPANISH
 	"", // ITALIAN
@@ -1687,7 +1759,8 @@ void* init_item_table() {
 	Itemize(EvolutionStone<water _ dragon>);
 	Itemize(EvolutionStone<bug _ steel>);
 	Itemize(EvolutionStone<bug _ rock>);
-	Itemize(LeadersCrest);
+	Itemize(KingPromotionItem<steel _ dark>);
+	Itemize(KingPromotionItem<psychic _ water>);
 	Itemize(Everstone);
 
 	EndLine();
@@ -1732,6 +1805,7 @@ void* init_item_table() {
 	Itemize(WideLens);
 	Itemize(ScopeLens);
 	Itemize(LifeOrb);
+	item_table[counter++] = ItemClass([](Piece* piece, ItemClass& IC) -> PokeItem* { return new LightBall(piece, IC); }, LightBall::usefulness_tier, LightBall::draw, LightBall::name, LightBall::description, LightBall::RNG);;
 	Itemize(LoadedDice);
 	Itemize(Metronome);
 	
@@ -1784,7 +1858,9 @@ ItemClass::ItemClass(PokeItem* (*ctor)(Piece*, ItemClass&), int (*w)(Piece*), vo
 }
 
 PokeItem* ItemClass::operator()(Piece* piece) {
-	return constructor(piece, self);
+	auto item = constructor(piece, self);
+	item->update_pokeicon();
+	return item;
 }
 
 ItemClass item_table[NB_OF_ITEMS];

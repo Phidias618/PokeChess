@@ -21,6 +21,8 @@ Surface typing_icons_sprite_sheet;
 
 Surface typing_icon[18];
 
+Surface pokemon_icons;
+
 Surface pokeball_img, megaphone_img;
 
 
@@ -41,6 +43,10 @@ Surface skip_button;
 Surface boost_arrows;
 
 Surface right_arrow;
+
+
+Mix_Music* battle_music, * selection_music, * promotion_music, * end_music, * check_music, * promotion_end_music, * settings_music = NULL;
+Mix_Chunk* slash_effect, * stat_increase_effect, * stat_decrease_effect = NULL;
 
 void* load_all_sounds() {
 	Mix_FreeMusic(battle_music);
@@ -76,9 +82,9 @@ void* load_all_sounds() {
 	return NULL;
 }
 
-void* load_all_sprites(int tile_size) {
-	TILE_SIZE = tile_size;
-	ITEM_SIZE = tile_size / 2;
+void* load_all_sprites(int __tile_size) {
+	TILE_SIZE = __tile_size;
+	ITEM_SIZE = __tile_size / 2;
 	ITEM_MEGA_SIZE = 4 * TILE_SIZE / 4;
 	ITEM_MINI_SIZE = 3 * TILE_SIZE / 8;
 	textbox_frame = load_img("assets\\Sprites\\textbox_frame.png");
@@ -122,11 +128,11 @@ void* load_all_sprites(int tile_size) {
 
 	right_arrow = load_img("assets\\Sprites\\arrow.png").scale_to(TILE_SIZE, TILE_SIZE, true);
 
+	pokemon_icons = load_img("assets\\Sprites\\roaster.png").scale_to(TILE_SIZE * 41 * 3 / 4, TILE_SIZE * 19 * 3 / 4, true);
+
 	PRINT_DEBUG("\n\nFIN DU CHARGEMENT\n\n")
 	return NULL;
 }
 
 void* __ = load_all_sprites(TILE_SIZE);
 
-Mix_Music *battle_music, *selection_music, *promotion_music, *end_music, *check_music, *promotion_end_music, *settings_music = NULL;
-Mix_Chunk *slash_effect, *stat_increase_effect, *stat_decrease_effect = NULL;
