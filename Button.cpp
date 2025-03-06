@@ -1132,9 +1132,8 @@ void BoardButton::effect(int mouse_button, double x, double y) {
 				if (game.selected_item != NULL) {
 					if (piece->item != NULL) {
 						piece->item->cls.is_avaible = true;
-						piece->set_item(NULL);
 					}
-
+					piece->set_item(NULL);
 					piece->set_item((*game.selected_item)(piece));
 					game.selected_item = NULL;
 					game.is_holding_something = false;

@@ -1636,7 +1636,14 @@ public:
 	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
-		return 0;
+		return 2 * (piece->Class == Pawn::cls);
+	}
+
+	virtual void attack_modifier(move_data& data) {
+		if (data.en_passant) {
+			data.move_again = true;
+			data.is_super_effective = true;
+		}
 	}
 
 	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
@@ -1713,7 +1720,7 @@ public:
 
 const char* KingPromotionItem<steel, dark>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 	"Emblème du Général", // FRENCH
-	"Leader’s Crest", // ENGLISH
+	"Leader's Crest", // ENGLISH
 	"Anführersymbol", // GERMAN
 	"Distintivo de Líder", // SPANISH
 	"Simbolo del capo", // ITALIAN
@@ -1859,7 +1866,6 @@ ItemClass::ItemClass(PokeItem* (*ctor)(Piece*, ItemClass&), int (*w)(Piece*), vo
 
 PokeItem* ItemClass::operator()(Piece* piece) {
 	auto item = constructor(piece, self);
-	item->update_pokeicon();
 	return item;
 }
 

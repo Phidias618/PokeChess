@@ -219,9 +219,10 @@ void Piece::set_item(PokeItem* new_item) {
 		item = NULL;
 		delete temp;
 	}
-	item = new_item;
-	if (item != NULL) {
+	if (new_item != NULL) {
+		item = new_item;
 		item->holder = this;
+		item->update_pokeicon();
 	}
 	update_sprite();
 	
