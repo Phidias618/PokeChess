@@ -128,7 +128,7 @@ void* load_all_sprites(int __tile_size) {
 
 	right_arrow = load_img("assets\\Sprites\\arrow.png").scale_to(TILE_SIZE, TILE_SIZE, true);
 
-	pokemon_icons = load_img("assets\\Sprites\\roaster.png").scale_to(TILE_SIZE * 41 * 3 / 4, TILE_SIZE * 19 * 3 / 4, true);
+	pokemon_icons = load_img("assets\\Sprites\\roster.png").scale_to(TILE_SIZE * 41 * 3 / 4, TILE_SIZE * 19 * 3 / 4, true);
 
 	PRINT_DEBUG("\n\nFIN DU CHARGEMENT\n\n")
 	return NULL;

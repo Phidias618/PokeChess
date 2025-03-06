@@ -1675,7 +1675,7 @@ public:
 	
 	virtual void update_pokeicon() {
 		if (holder->Class == Pawn::cls and (holder->type == t1 or holder->type == t2))
-			holder->set_pokeicon(PokemonIcon(25 + holder->color, 1 + holder->type));
+			holder->set_pokeicon(PokemonIcon(25 + holder->color, 1 + t1));
 	}
 
 	defdraw(2, t1);
