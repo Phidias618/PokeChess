@@ -22,6 +22,7 @@ extern Surface phone_frame;
 extern Surface rotom_dex;
 
 extern Surface pokemon_icons;
+extern Surface psyduck_sprite, psyduck_active_sprite;
 
 extern Surface right_arrow;
 

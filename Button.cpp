@@ -590,8 +590,8 @@ bool TextBoxDisplay::is_active() {
 }
 
 void TextBoxDisplay::activate() {
-
-	if (game.board.last_move_begin_square == NULL or game.board.last_move_end_square->y > 3) {
+	move_data& const last_move_data = game.board.get_last_nonduck_move();
+	if (last_move_data.begin_square == NULL or last_move_data.begin_square->y > 3) {
 		y = 10;
 		side = white;
 	}
@@ -1706,4 +1706,19 @@ void PhoneSwitchPage::effect(int, double, double) {
 	else {
 		game.phone_displayed_page--;
 	}
+}
+
+
+PsyduckChessButton::PsyduckChessButton(double _x, double _y) : Button(_x, _y, 1, 1) {
+	;
+}
+
+void PsyduckChessButton::draw() {
+	game.draw(icon_sheet, x, y, game.with_duck_chess, 0, 1, 1);
+	game.draw(psyduck_sprite, x, y);
+	game.draw(CSM_font_array[TILE_SIZE / 3].render_shaded("Psyduck Chess", Color::black, game.bg_color), x + 1.0, y + 0.5, middle_left);
+}
+
+void PsyduckChessButton::effect(int, double, double) {
+	game.with_duck_chess = not game.with_duck_chess;
 }

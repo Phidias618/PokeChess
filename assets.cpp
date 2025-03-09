@@ -22,6 +22,7 @@ Surface typing_icons_sprite_sheet;
 Surface typing_icon[18];
 
 Surface pokemon_icons;
+Surface psyduck_sprite, psyduck_active_sprite;
 
 Surface pokeball_img, megaphone_img;
 
@@ -130,6 +131,8 @@ void* load_all_sprites(int __tile_size) {
 
 	pokemon_icons = load_img("assets\\Sprites\\roster.png").scale_to(TILE_SIZE * 41 * 3 / 4, TILE_SIZE * 19 * 3 / 4, true);
 
+	psyduck_sprite = load_img("assets\\Sprites\\psyduck.png").scale_to(TILE_SIZE, TILE_SIZE, true);
+	psyduck_active_sprite = load_img("assets\\Sprites\\psyduck_active.png").scale_to(TILE_SIZE, TILE_SIZE, true);
 	PRINT_DEBUG("\n\nFIN DU CHARGEMENT\n\n")
 	return NULL;
 }

@@ -71,16 +71,16 @@ auto Square::to_graveyard() -> void {
 
 auto Square::draw() -> void {
 	
-	
+	move_data& const last_move_data = board->get_last_nonduck_move();
 	Color color = board->light_square_color;
 	if ((x + y) % 2 == 0)
 		color = board->dark_square_color;
-	if (board->last_move_begin_square == this or board->last_move_end_square == this)
+	if (last_move_data.begin_square == this or last_move_data.target_square == this)
 		color = board->last_move_color;
 	if (game.selected_piece != NULL && game.selected_piece == piece)
 		color = board->selected_piece_color;
 
-	game.draw_rect((x + y) % 2 == 1 ? board->light_square_color : board->dark_square_color, 5 + x, 9 - y, 1.0, 1.0);
+	game.draw_rect(color, 5 + x, 9 - y, 1.0, 1.0);
 
 	//SDL_FillSurfaceRect(board->surface, &rect, ((x + y) % 2 == 0) ? board->dark_square_color : board->light_square_color);
 
@@ -178,6 +178,7 @@ void Board::init() {
 
 auto Board::clear() -> void {
 	turn_number = 0;
+	duck = NULL;
 	File* row_ptr = grid;
 	File* end_row_ptr = row_ptr + 8;
 	for (; row_ptr < end_row_ptr; row_ptr++) {
@@ -217,10 +218,12 @@ void Board::reset() {
 	layout[4] = King::cls;
 
 	active_player = white;
-	last_move_begin_square = NULL;
-	last_move_end_square = NULL;
+	// last_move_begin_square = NULL;
+	// last_move_end_square = NULL;
+	duck = NULL;
 
 	in_bonus_move = false;
+	first_turn = true;
 
 	for (unsigned int i = 0; i < 8; i++) {
 		File& file = grid[i];
@@ -268,7 +271,14 @@ auto Board::operator[](int i) -> File& {
 		throw std::exception();
 }
 
-
+move_data& const Board::get_last_nonduck_move() {
+	for (move_data& const move : move_historic) {
+		if (move.attacker->color != no_color)
+			return move;
+	}
+	static move_data empty;
+	return empty;
+}
 
 bool Board::in_stalemate(piece_color color) {
 	for (Square& begin_square : self) {

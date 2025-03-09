@@ -17,6 +17,9 @@ set_cls(Knight, 3, "Knight");
 set_cls(Rook, 4, "Rook");
 set_cls(Pawn, 5, "Pawn");
 
+
+PieceClass Duck::__cls = PieceClass(1237, "Duck");
+PieceClass* const Duck::cls = &Duck::__cls;
 #undef set_cls
 
 #include "game.h"
@@ -116,6 +119,10 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 }
 
 PieceClass::PieceClass() : constructor(NULL), id(-2), name("") {
+	;
+}
+
+PieceClass::PieceClass(int _id, char const* _name) : constructor(NULL), id(_id), name(_name) {
 	;
 }
 
@@ -238,6 +245,9 @@ bool Piece::base_can_move_to(Square& target_square) {
 	if (board.in_bonus_move and board.last_move_data.attacker != this)
 		return false; // when you are allowed to play twice or more, you can only move the same piece
 
+	if (target_square.piece != NULL and target_square.piece->Class == Duck::cls)
+		return false;
+
 	auto target_piece = target_square.piece;
 	if (target_piece == NULL or (target_piece->color != this->color)) {
 		// need to check wether the move will put your own king in check
@@ -275,7 +285,7 @@ bool Piece::base_do_control(Square& target_square) { return false; }
 
 move_data Piece::move_to(Square& square) {
 	move_data data;
-
+	data.set_type_matchup_data(this, square.piece, &square);
 	if (item == NULL or can_move_to(square, ignore_item)) {
 		data = base_move_to(square);
 	}
@@ -299,6 +309,7 @@ move_data Piece::base_move_to(Square& target_square) {
 	move_data data;
 	data.set_type_matchup_data(this, target_square.piece, &target_square);
 	data.was_in_check = false;
+
 	for (King* king : board.king_list[color]) {
 		if (king->is_in_check()) {
 			data.was_in_check = true;
@@ -318,7 +329,8 @@ move_data Piece::base_move_to(Square& target_square) {
 			square = &target_square; // change its current square, that's not useless as this gives the game information about the square you would have landed
 		}
 		else {
-			square->piece = NULL; // removes itself from its previous location
+			if (square != NULL)
+				square->piece = NULL; // removes itself from its previous location
 			target_square.piece = this; // moves itself to its new location
 			square = &target_square; // change its current square
 		}
@@ -520,15 +532,20 @@ bool Pawn::can_double_step(Square& target, bool base_rule) {
 }
 
 auto Pawn::can_en_passant(Square& target_square, bool base_rule) -> bool {
-	if (board.last_move_data.attacker == NULL or board.last_move_data.attacker->color == color or board.last_move_data.attacker->Class != Pawn::cls)
-		return false; // you can only en passant if the last piece move is an enemy pawn
+	move_data& const last_move_data = board.get_last_nonduck_move();
+
+	if (last_move_data.attacker == NULL or
+		last_move_data.cancel or
+		last_move_data.attacker->color == color or 
+		last_move_data.attacker->Class != Pawn::cls)
+		return false; // you can only en passant if the last piece moved is an enemy pawn
 	
 	if (not base_do_control(target_square)) 
 		return false; // you can only en passant in diagonal
 	Piece* target_piece = board[target_square.x][y].piece;
-	if (target_piece != board.last_move_data.attacker)
+	if (target_piece != last_move_data.attacker)
 		return false; // the last piece moved needs to be your target
-	if (ABS_INT(board.last_move_end_square->y - board.last_move_begin_square->y) != 2)
+	if (ABS_INT(last_move_data.target_square->y - last_move_data.begin_square->y) != 2)
 		return false; // the opposing pawn must have perform a double step
 	
 	// must check wether the move wille put our king in danger
@@ -539,7 +556,7 @@ auto Pawn::can_en_passant(Square& target_square, bool base_rule) -> bool {
 		square->piece = NULL;
 		target_square.piece = this;
 		square = &target_square;
-		board.last_move_end_square->piece = NULL;
+		board.last_move_data.target_square->piece = NULL;
 
 		bool in_check = false;
 		for (King* king : board.king_list[board.active_player]) {
@@ -553,7 +570,7 @@ auto Pawn::can_en_passant(Square& target_square, bool base_rule) -> bool {
 		square = begin_pos;
 		square->piece = this;
 		target_square.piece = NULL;
-		board.last_move_end_square->piece = target_piece;
+		board.last_move_data.target_square->piece = target_piece;
 
 		return not in_check;
 	}
@@ -576,9 +593,12 @@ auto Pawn::base_move_to(Square& target_square) -> move_data {
 
 	if (can_en_passant(target_square)) {
 		data.en_passant = true;
-		data.set_type_matchup_data(this, board.last_move_data.attacker, &target_square);
+
+		move_data& const last_move_data = board.get_last_nonduck_move();
+
+		data.set_type_matchup_data(this, last_move_data.attacker, &target_square);
 		if (not data.cancel) {
-			board.last_move_end_square->to_graveyard();
+			last_move_data.target_square->to_graveyard();
 
 			if (data.suicide) {
 				square->to_graveyard();
@@ -790,4 +810,23 @@ auto King::castle(Square& target_square) -> void { // assume King::can_castle(ta
 
 bool King::is_in_check(bool base_rule) {
 	return square->is_controlled_by(not color);
+}
+
+
+Duck::Duck(Board& b, Square* sq) : Piece(b, Duck::cls, no_color, sq, typeless, NULL) {
+	sprite = psyduck_sprite;
+	board.duck = this;
+}
+
+bool Duck::base_can_move_to(Square& target) {
+	return target.piece == NULL;
+}
+
+void Duck::resize_sprite() {
+	if (board.active_player == no_color) {
+		sprite = psyduck_active_sprite;
+	}
+	else {
+		sprite = psyduck_sprite;
+	}
 }

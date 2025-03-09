@@ -29,6 +29,7 @@ class Knight;
 class WhitePawn;
 class BlackPawn;
 class King;
+class Duck;
 
 
 
@@ -98,7 +99,7 @@ public:
 
 
 	PieceClass();
-
+	PieceClass(int _id, char const* _name);
 	PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> constructor, int id, const char* const name);
 
 	bool operator==(void*) const;
@@ -209,7 +210,7 @@ public:
 
 	void set_pokeicon(PokemonIcon pokeicon=PokemonIcon(-1, -1));
 
-	void resize_sprite();
+	virtual void resize_sprite();
 	void update_sprite();
 
 	virtual ~Piece();
@@ -338,4 +339,14 @@ public:
 
 };
 
+class Duck : public virtual Piece {
+	static PieceClass __cls;
+public:
+	static PieceClass* const cls;
 
+	Duck(Board& board, Square* square);
+
+	virtual bool base_can_move_to(Square& target);
+
+	virtual void resize_sprite();
+};

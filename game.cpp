@@ -139,6 +139,8 @@ void Game::select_piece(Piece* piece) {
 void Game::unselect_piece() {
 	if (selected_piece == NULL) 
 		return;
+	if (board.duck != NULL and board.duck->square == NULL)
+		return;
 	int x = selected_piece->x; int y = selected_piece->y;
 	selected_piece = NULL;
 	is_holding_something = false;
@@ -175,7 +177,6 @@ void Game::draw_rect(Color color, double x, double y, double w, double h) {
 }
 
 void Game::move_selected_piece_to(Square& square) {
-
 	if (active_textbox != NULL) {
 		active_textbox->destroy_all();
 		active_textbox = last_textbox = NULL;
@@ -189,11 +190,11 @@ void Game::move_selected_piece_to(Square& square) {
 
 	board.last_move_data = selected_piece->move_to(square);
 
-	Square* temp = board.last_move_begin_square;
-	board.last_move_begin_square = begin_square;
+	// Square* temp = board.last_move_begin_square;
+	// board.last_move_begin_square = begin_square;
 
-	temp = board.last_move_end_square;
-	board.last_move_end_square = selected_piece->square;
+	// temp = board.last_move_end_square;
+	// board.last_move_end_square = selected_piece->square;
 
 	unselect_piece();
 
@@ -301,8 +302,26 @@ void Game::resume_move() {
 }
 
 void Game::change_turn() {
-	move_data data = board.last_move_data;
-	board.active_player = not board.active_player;
+	move_data& data = board.last_move_data;
+	if (board.active_player == no_color) {
+		board.first_turn = false;
+		board.active_player = not board.move_historic.front().attacker->color;
+		board.duck->sprite = psyduck_sprite;
+	}
+	else {
+		if (board.duck == NULL) {
+			select_piece(new Duck(board, NULL));
+		}
+		else {
+			select_piece(board.duck);
+			board.duck->sprite = psyduck_active_sprite;
+		}
+		
+		board.active_player = no_color;
+	}
+	
+
+
 
 	if (with_typing) {
 		if (data.was_in_check)
@@ -382,7 +401,7 @@ void Game::to_menu() {
 	buttons->add(new DisableRNGButton(14.0, 3.0));
 	buttons->add(new RandomBattleButton(14.0, 4.0));
 	buttons->add(new EnableAntichessButton(14.0, 5.5));
-
+	buttons->add(new PsyduckChessButton(14.0, 6.5));
 	reset();
 }
 

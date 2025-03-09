@@ -456,3 +456,12 @@ public:
 
 	virtual void effect(int, double, double);
 };
+
+class PsyduckChessButton : public Button {
+public:
+	PsyduckChessButton(double x, double y);
+
+	virtual void draw();
+
+	virtual void effect(int, double, double);
+};

@@ -83,8 +83,9 @@ private:
 public:
 	PieceClass* layout[8];
 
-	std::forward_list<King*> king_list[2];
-	short nb_of_kings[2];
+	std::forward_list<King*> king_list[3];
+	Duck* duck = NULL;
+	short nb_of_kings[3] = { 0, 0, 0 };
 	
 	short white_death;
 	short black_death;
@@ -100,10 +101,10 @@ public:
 	Color possible_move_color;
 	Color last_move_color;
 
-	Square* last_move_begin_square;
-	Square* last_move_end_square;
+	/*Square* last_move_begin_square;
+	Square* last_move_end_square;*/
 	move_data last_move_data;
-
+	
 	piece_color active_player;
 	double crit_rate;
 	double miss_rate;
@@ -111,6 +112,7 @@ public:
 	bool in_bonus_move;
 
 	int turn_number;
+	bool first_turn = true;
 	std::list<move_data> move_historic;
 
 	void resize_surface();
@@ -130,6 +132,8 @@ public:
 	void clear();
 
 	void reset();
+
+	move_data& const get_last_nonduck_move();
 
 	File& operator[](int i);
 
