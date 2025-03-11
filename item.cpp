@@ -538,7 +538,7 @@ public:
 	virtual void add_cosmetic(move_data& data) {
 		if (used) {
 			char buffer[256] = "\0";
-			strcat_s(buffer, holder->Class->name);
+			strcat_s(buffer, holder->Class->name[(int)game.language]);
 			switch (type) {
 			case ground:
 				strcat_s(buffer, "\'s\nBalloon poped.");
@@ -750,7 +750,7 @@ public:
 	virtual void add_cosmetic(move_data& data) {
 		if (activated) {
 			char buffer[256] = "\0";
-			strcat_s(buffer, holder->Class->name);
+			strcat_s(buffer, holder->Class->name[(int)game.language]);
 			strcat_s(buffer, "\nDied to life orb");
 			game.add_textbox(buffer);
 		}
@@ -850,7 +850,7 @@ public:
 	virtual void add_cosmetic(move_data& data) {
 		if (activated) {
 			char buffer[256] = "\0";
-			strcat_s(buffer, data.attacker->Class->name);
+			strcat_s(buffer, data.attacker->Class->name[(int)game.language]);
 			strcat_s(buffer, "\nDied to Rcky Hlmt");
 			game.add_textbox(buffer);
 		}
@@ -956,7 +956,7 @@ public:
 	virtual void add_cosmetic(move_data& data) {
 		if (activated) {
 			char buffer[256] = "\0";
-			strcat_s(buffer, data.attacker->Class->name);
+			strcat_s(buffer, data.attacker->Class->name[(int)game.language]);
 			strcat_s(buffer, "\nwas sent back.");
 			game.add_textbox(buffer);
 		}
@@ -1019,7 +1019,7 @@ public:
 	virtual void add_cosmetic(move_data& data) {
 		if (activated) {
 			char buffer[256] = "\0";
-			strcat_s(buffer, holder->Class->name);
+			strcat_s(buffer, holder->Class->name[(int)game.language]);
 			strcat_s(buffer, "\nDied to StckyBrbs");
 			game.add_textbox(buffer);
 		}
@@ -1126,7 +1126,7 @@ public:
 	virtual void add_cosmetic(move_data& data) {
 		if (used) {
 			char buffer[256] = "\0";
-			strcat_s(buffer, holder->Class->name);
+			strcat_s(buffer, holder->Class->name[(int)game.language]);
 			strcat_s(buffer, "\nfled successfuly");
 			game.add_textbox(buffer);
 			consume();
@@ -1461,7 +1461,7 @@ public:
 	virtual void add_cosmetic(move_data& data) {
 		if (activated) {
 			char buffer[256] = "\0";
-			strcat_s(buffer, holder->Class->name);
+			strcat_s(buffer, holder->Class->name[(int)game.language]);
 			strcat_s(buffer, "\nDied to\nBlackSludge");
 			game.add_textbox(buffer);
 		}
@@ -1641,8 +1641,7 @@ public:
 
 	virtual void attack_modifier(move_data& data) {
 		if (data.en_passant) {
-			data.move_again = true;
-			data.is_super_effective = true;
+			data.matchup++;
 		}
 	}
 
@@ -1658,8 +1657,8 @@ const char* Baguette::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 };
 
 const char* Baguette::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Une baguette.\n", // FRENCH
-	" - A baguette.\n", // ENGLISH
+	" - Une baguette.\n - Les prises en passant son super efficace.\n", // FRENCH
+	" - A baguette.\n - En passant are super effective.\n", // ENGLISH
 	" - Ein Baguette.\n", // GERMAN
 	" - Una barra de pan.\n", // SPANISH
 	" - Una baguette.\n", // ITALIAN
@@ -1743,6 +1742,63 @@ const char* KingPromotionItem<t1, t2>::description[(int)LANGUAGE::NB_OF_LANGUAGE
 	"", // GERMAN
 	"", // SPANISH
 	"", // ITALIAN
+};
+
+
+class IronBall : public PokeItem {
+public:
+	IronBall(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::basic, -1, IC) {};
+
+	defdraw(4, 2);
+
+	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+
+	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+
+	static int usefulness_tier(Piece* piece) {
+		return -1;
+	}
+
+	virtual void defense_modifier(move_data& data) {
+		if (data.attacker->type == ground and data.matchup == super_effective) {
+			data.matchup = neutral;
+		}
+	}
+
+	virtual bool is_move_disallowed(Square& target) {
+		if (holder->Class == Pawn::cls) {
+			Pawn* piece = dynamic_cast<Pawn*>(holder);
+
+			if (piece->can_double_step(target)) {
+				return true;
+			}
+		}
+		else if (holder->Class == King::cls) {
+			King* piece = dynamic_cast<King*>(holder);
+
+			if (piece->can_castle(target)) {
+				return true;
+			}
+		}
+		return false;
+	}
+};
+
+
+const char* IronBall::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	"Balle Fer", // FRENCH
+	"Iron Ball", // ENGLISH
+	"Eisenkugel", // GERMAN
+	"Bola Férrea", // SPANISH
+	"Ferropalla", // ITALIAN
+};
+
+const char* IronBall::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	" - Retire une potentielle immunité sol.\n - Les rois ne peuvent plus roquer.\n - Les pions ne peuvent plus faire de double pas.\n", // FRENCH
+	" - Remove any ground immunity.\n - Kings/Pawns can no longer castle/double step.\n", // ENGLISH
+	" - Entfernt jegliche Bodenimmunität.\n", // GERMAN
+	" - Una barra de pan.\n", // SPANISH
+	" - Una baguette.\n", // ITALIAN
 };
 
 void* init_item_table() {
@@ -1835,8 +1891,9 @@ void* init_item_table() {
 	Itemize(StickyBarbs);
 
 	Itemize(BlackSludge);
-	Itemize(Baguette);
+	Itemize(IronBall);
 
+	Itemize(Baguette);
 	End();
 
 	return NULL;

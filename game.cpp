@@ -245,13 +245,13 @@ void Game::resume_move() {
 
 		if (data.do_miss) {
 			char buffer[64] = { '\0' };
-			strcpy_s(buffer, data.attacker->Class->name);
+			strcpy_s(buffer, data.attacker->Class->name[(int)game.language]);
 			strcat_s(buffer, "'s\nattack's missed");
 			add_textbox(buffer);
 		}
 		else if (data.is_immune) {
 			char buffer[64] = "It doesn't affect\n";
-			strcat_s(buffer, data.defender->Class->name);
+			strcat_s(buffer, data.defender->Class->name[(int)game.language]);
 			add_textbox(buffer);
 		}
 		else if (data.do_crit and not data.do_miss)
@@ -303,23 +303,27 @@ void Game::resume_move() {
 
 void Game::change_turn() {
 	move_data& data = board.last_move_data;
-	if (board.active_player == no_color) {
-		board.first_turn = false;
-		board.active_player = not board.move_historic.front().attacker->color;
-		board.duck->sprite = psyduck_sprite;
-	}
-	else {
-		if (board.duck == NULL) {
-			select_piece(new Duck(board, NULL));
+	if (with_duck_chess) {
+		if (board.active_player == no_color) {
+			board.first_turn = false;
+			board.active_player = not board.move_historic.front().attacker->color;
+			board.duck->sprite = psyduck_sprite;
 		}
 		else {
-			select_piece(board.duck);
-			board.duck->sprite = psyduck_active_sprite;
+			if (board.duck == NULL) {
+				select_piece(new Duck(board, NULL));
+			}
+			else {
+				select_piece(board.duck);
+				board.duck->sprite = psyduck_active_sprite;
+			}
+
+			board.active_player = no_color;
 		}
-		
-		board.active_player = no_color;
 	}
-	
+	else {
+		board.active_player = not board.active_player;
+	}
 
 
 
@@ -398,10 +402,11 @@ void Game::to_menu() {
 
 	buttons->clear();
 	buttons->add(new BeginGameButton());
-	buttons->add(new DisableRNGButton(14.0, 3.0));
-	buttons->add(new RandomBattleButton(14.0, 4.0));
-	buttons->add(new EnableAntichessButton(14.0, 5.5));
-	buttons->add(new PsyduckChessButton(14.0, 6.5));
+	buttons->add(new ChangeGameruleButton(14.0, 3.0, &with_RNG, &pokeball_img, false, 1, 0, "avec de l'Aléatoire", "with RNG"));
+	buttons->add(new ChangeGameruleButton(14.0, 4.0, &with_random_battle, &unown_questionmark_animated, true, 16, FPS/8, "Team Aléatoire", "Random Teams"));
+	buttons->add(new ChangeGameruleButton(14.0, 5.0, &with_items, new Surface(), true, 1, 0, "Objets", "Items"));
+	buttons->add(new ChangeGameruleButton(14.0, 6.0, &with_antichess, &pokeball_img, false, 1, 0, "Anti-echec", "Suicide Cup"));
+	buttons->add(new ChangeGameruleButton(14.0, 7.0, &with_duck_chess, &psyduck_sprite, true, 1, 0, "Echec Psykokwak", "Psyduck Chess"));
 	reset();
 }
 

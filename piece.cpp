@@ -1,5 +1,7 @@
 /*This files contains all the code related to chess piece*/
 
+#include <cstdarg>
+
 #include "SDL+.h"
 #include "Debugger.h"
 
@@ -8,17 +10,17 @@
 #include "poketyping.h"
 #include "piece.h"
 
-#define set_cls(Class, id, name) PieceClass  Class::__cls = PieceClass([](Board& board, piece_color color, Square* sq, typing type, PokeItem* item) -> Piece* { return new Class(board, color, sq, type, item);  }, id, name); PieceClass* const Class::cls = &Class::__cls;
+#define set_cls(Class, id, ...) PieceClass  Class::__cls = PieceClass([](Board& board, piece_color color, Square* sq, typing type, PokeItem* item) -> Piece* { return new Class(board, color, sq, type, item);  }, id, __VA_ARGS__); PieceClass* const Class::cls = &Class::__cls;
 
-set_cls(King, 0, "King");
-set_cls(Queen, 1, "Queen");
-set_cls(Bishop, 2, "Bishop");
-set_cls(Knight, 3, "Knight");
-set_cls(Rook, 4, "Rook");
-set_cls(Pawn, 5, "Pawn");
+set_cls(King, 0, "Roi", "King");
+set_cls(Queen, 1, "Dame", "Queen");
+set_cls(Bishop, 2, "Fou", "Bishop");
+set_cls(Knight, 3, "Cavalier", "Knight");
+set_cls(Rook, 4, "Tour", "Rook");
+set_cls(Pawn, 5, "Pion", "Pawn");
 
 
-PieceClass Duck::__cls = PieceClass(1237, "Duck");
+PieceClass Duck::__cls = PieceClass(6, "Duck");
 PieceClass* const Duck::cls = &Duck::__cls;
 #undef set_cls
 
@@ -118,15 +120,21 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 
 }
 
-PieceClass::PieceClass() : constructor(NULL), id(-2), name("") {
+PieceClass::PieceClass() : constructor(NULL), id(-2) {
 	;
 }
 
-PieceClass::PieceClass(int _id, char const* _name) : constructor(NULL), id(_id), name(_name) {
-	;
+PieceClass::PieceClass(int _id, char const* names...) : constructor(NULL), id(_id) {
+	va_list args;
+	va_start(args, _id);
+	name[0] = names;
+	for (int i = 1; i < (int)LANGUAGE::NB_OF_LANGUAGE; i++) {
+		name[i] = va_arg(args, char const*);
+	}
+	va_end(args);
 }
 
-PieceClass::PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> ctor, int id_, const char* const _name) : id(id_), constructor(ctor), name(_name) {
+PieceClass::PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> ctor, int id_, const char* names...) : id(id_), constructor(ctor) {
 	base_promotion_constructor =
 		[this](Board& b, piece_color c, Square* sq, typing t, PokeItem* i) -> Piece* {
 			Piece* res = constructor(b, c, sq, t, i);
@@ -134,6 +142,14 @@ PieceClass::PieceClass(std::function<Piece* (Board&, piece_color, Square*, typin
 			res->set_pokeicon(PokemonIcon(res));
 			return res;
 		};
+
+	va_list args;
+	va_start(args, names);
+	name[0] = names;
+	for (int i = 1; i < (int)LANGUAGE::NB_OF_LANGUAGE; i++) {
+		name[i] = va_arg(args, char const*);
+	}
+	va_end(args);
 }
 
 PieceClass& PieceClass::operator=(const PieceClass& other) {
@@ -354,6 +370,8 @@ bool Piece::can_move_to(Square& target, Uint64 flags) {
 	static bool check_for_is_move_disallowed = true, check_for_is_move_allowed = true;
 	static bool check_for_antichess = true;
 
+	if (adv != NULL and adv->Class == Duck::cls)
+		return false;
 
 	if (board.in_bonus_move and board.last_move_data.attacker != this)
 		return false; // when you are allowed to play twice or more, you can only move the same piece

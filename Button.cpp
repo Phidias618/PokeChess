@@ -1,5 +1,6 @@
 #include <cstring>
 #include <random>
+#include <cstdarg>
 
 #include "Button.h"
 #include "assets.h"
@@ -83,15 +84,11 @@ void ButtonCollection::draw() {
 
 #if SHOW_BUTTON_HITBOX
 			counter++;
-			if (current->button->update() != Button::suicide) {
-				current->button->draw();
-				if (counter % 2)
-					game.draw_rect(Color::red, current->button->x, current->button->y, current->button->w, current->button->h);
-			}
+			current->button->draw();
+			if (counter % 2)
+				game.draw_rect(Color::red, current->button->x, current->button->y, current->button->w, current->button->h);
 #else
-			if (current->button->update() != Button::suicide) {
-				current->button->draw();
-			}
+			current->button->draw();
 #endif
 
 		}
@@ -178,14 +175,16 @@ void BeginGameButton::effect(int, double, double) {
 			game.type_selection = true;
 			button.effect(SDL_BUTTON_LEFT, 0, 0);
 			game.type_selection = false;
-			button.effect(SDL_BUTTON_LEFT, 0, 0);
+			if (game.with_items)
+				button.effect(SDL_BUTTON_LEFT, 0, 0);
 
 			game.board.active_player = black;
 
 			game.type_selection = true;
 			button.effect(SDL_BUTTON_LEFT, 0, 0);
 			game.type_selection = false;
-			button.effect(SDL_BUTTON_LEFT, 0, 0);
+			if (game.with_items)
+				button.effect(SDL_BUTTON_LEFT, 0, 0);
 			
 			game.board.active_player = white;
 			game.to_game();
@@ -304,7 +303,7 @@ void PromotionButton::effect(int mouse_button, double, double) {
 	game.to_game(true);
 	if (game.with_typing) {
 		char buffer[64] = "Pawn evolved into\n";
-		strcat_s(buffer, square->piece->Class->name);
+		strcat_s(buffer, square->piece->Class->name[(int)game.language]);
 		game.add_textbox(buffer);
 	}
 
@@ -443,17 +442,14 @@ RandomTypingButton::RandomTypingButton(double x_, double y_) : Button(x_, y_, 1.
 	current_sprite = 0;
 }
 
-Button::update_return_code RandomTypingButton::update() {
+void RandomTypingButton::draw() {
 	counter++;
 	if (counter >= period) {
 		counter = 0;
 		current_sprite++;
 		current_sprite %= 16;
 	}
-	return Button::nothing;
-}
 
-void RandomTypingButton::draw() {
 	game.draw(unown_questionmark_animated, x, y, (double)current_sprite, 0.0, 1.0, 1.0);
 }
 
@@ -558,6 +554,9 @@ void SwitchSelectionButton::draw() {
 }
 
 void SwitchSelectionButton::effect(int, double, double) {
+	if (not game.with_items) {
+		return;
+	}
 	game.type_selection = not game.type_selection;
 	if (game.selected_item != NULL) {
 		game.selected_item->is_avaible = true;
@@ -613,66 +612,64 @@ void TextBoxDisplay::destroy_all() {
 	delete this;
 }
 
-Button::update_return_code TextBoxDisplay::update() {
+
+void TextBoxDisplay::draw() {
+
 	if (shift_delay > 0) {
 		shift_delay--;
-		return Button::nothing;
 	}
-	if (shift_timer > 0) {
+	else if (shift_timer > 0) {
 		shift_timer--;
 		SDL_Rect dest(begin_x, begin_y, 0, 0);
 		SDL_Rect area(begin_x, begin_y + 4, char_per_line * char_width, char_width + y_pixel_increment);
 		sprite.blit(sprite, &dest, &area);
-
-		return Button::nothing;
-	}
-	char displayed_char = (text_index >= BUFFER_SIZE) ? '\0' : message[text_index];
-	if (displayed_char != '\0') {
-		if (displayed_char == '\n') {
-			visual_index = 0;
-			if (not is_on_second_line)
-				is_on_second_line = true;
-			else {
-				shift_delay = FPS / 4;
-				shift_timer = y_pixel_increment / 4;
-			}
-		}
-		else if (displayed_char < 128) {
-			SDL_Rect r;
-			r.x = begin_x + char_width * visual_index - (displayed_char=='\'')*2;
-			r.y = begin_y + y_pixel_increment * is_on_second_line;
-
-			Surface char_surface = poke_charset.chop({ (displayed_char % 16) * 16, (displayed_char / 16) * 16, 16, 16 });
-			char_surface.set_colorkey(char_surface.map_rgba(255, 255, 255, 255), true);
-
-			sprite.blit(char_surface, &r, NULL);
-
-			if (displayed_char != '\'')
-				visual_index++;
-		}
-		text_index++;
 	}
 	else {
-		timer--;
-		if (timer < 0) {
-			kill();
-			
-			if (next == NULL) {
-				game.active_textbox = game.last_textbox = NULL;
+		char displayed_char = (text_index >= BUFFER_SIZE) ? '\0' : message[text_index];
+		if (displayed_char != '\0') {
+			if (displayed_char == '\n') {
+				visual_index = 0;
+				if (not is_on_second_line)
+					is_on_second_line = true;
+				else {
+					shift_delay = FPS / 4;
+					shift_timer = y_pixel_increment / 4;
+				}
 			}
-			else {
-				game.active_textbox = next;
-				game.active_textbox->is_first = true;
-			}
+			else if (displayed_char < 128) {
+				SDL_Rect r;
+				r.x = begin_x + char_width * visual_index - (displayed_char == '\'') * 2;
+				r.y = begin_y + y_pixel_increment * is_on_second_line;
 
-			delete this;
-			return Button::suicide;
+				Surface char_surface = poke_charset.chop({ (displayed_char % 16) * 16, (displayed_char / 16) * 16, 16, 16 });
+				char_surface.set_colorkey(char_surface.map_rgba(255, 255, 255, 255), true);
+
+				sprite.blit(char_surface, &r, NULL);
+
+				if (displayed_char != '\'')
+					visual_index++;
+			}
+			text_index++;
+		}
+		else {
+			timer--;
+			if (timer < 0) {
+				kill();
+
+				if (next == NULL) {
+					game.active_textbox = game.last_textbox = NULL;
+				}
+				else {
+					game.active_textbox = next;
+					game.active_textbox->is_first = true;
+				}
+
+				delete this;
+				return;
+			}
 		}
 	}
-	return Button::nothing;
-}
 
-void TextBoxDisplay::draw() {
 	Surface scaled = sprite.scale_by(8.0 * TILE_SIZE / sprite->w, true);
 	game.draw(scaled, x, y, (side == white) ? bottom_left : top_left);
 }
@@ -707,29 +704,31 @@ StatBoostDisplay::StatBoostDisplay(Piece* boosted_piece, pokestat boosted_stat, 
 	boost_or_debuff = boost_or_debuff_;
 }
 
-Button::update_return_code StatBoostDisplay::update() {
+
+void StatBoostDisplay::draw() {
+	
 	if (delay > 0) {
 		delay--;
-		if (delay == 0)
-			if (boost_or_debuff == 1)
+		if (delay == 0) {
+			if (boost_or_debuff == 1) {
 				Mix_PlayChannel(1, stat_increase_effect, 0);
-			else
-				;
+			}
+		}
+		else {
+			return;
+		}
 	}
 	else {
 		counter--;
-		arrow_offset += 0.75/16.0;
+		arrow_offset += 0.75 / 16.0;
 		if (counter < 0) {
 			kill();
 			delete this;
-			return Button::suicide;
+			return;
 		}
 	}
-	return Button::nothing;
-}
 
-void StatBoostDisplay::draw() {
-	if (delay > 0 or piece == NULL)
+	if (delay > 0 or piece == NULL or piece->is_in_graveyard)
 		return;
 
 	Surface surface = game.drawing_board;
@@ -915,17 +914,14 @@ SettingsButton::SettingsButton(double x_, double y_) : Button(x_, y_, 1.0, 1.0) 
 	counter = 0;
 }
 
-Button::update_return_code SettingsButton::update() {
+void SettingsButton::draw() {
 	counter++;
 	if (counter >= period) {
 		counter = 0;
 		current_sprite++;
 		current_sprite %= 16;
 	}
-	return Button::nothing;
-}
 
-void SettingsButton::draw() {
 	game.draw(clink_animated, x, y, (double)current_sprite, 0.0, 1.0, 1.0);
 }
 
@@ -938,38 +934,6 @@ void SettingsButton::effect(int, double, double) {
 	}
 }
 
-
-DisableRNGButton::DisableRNGButton(double x_, double y_) : Button(x_, y_, 1.0, 1.0) {
-	;
-}
-
-void DisableRNGButton::draw() {
-	game.draw(pokeball_img, x, y);
-	game.draw(icon_sheet, x, y, game.with_RNG, 0, 1, 1);
-	game.draw(CSM_font_array[TILE_SIZE / 2].render_shaded("RNG", Color::black, game.bg_color), x + 1.0, y + 0.5, middle_left);
-}
-
-void DisableRNGButton::effect(int mouse_button, double, double) {
-	if (mouse_button == SDL_BUTTON_LEFT) {
-		game.with_RNG = not game.with_RNG;
-	}
-}
-
-EnableAntichessButton::EnableAntichessButton(double x_, double y_) : Button(x_, y_, 1.0, 1.0) {
-	;
-}
-
-void EnableAntichessButton::draw() {
-	game.draw(pokeball_img, x, y);
-	game.draw(icon_sheet, x, y, game.with_antichess, 0, 1, 1);
-	game.draw(CSM_font_array[TILE_SIZE / 3].render_shaded("Suicide Cup", Color::black, game.bg_color), x + 1.0, y + 0.5, middle_left);
-}
-
-void EnableAntichessButton::effect(int mouse_button, double, double) {
-	if (mouse_button == SDL_BUTTON_LEFT) {
-		game.with_antichess = not game.with_antichess;
-	}
-}
 
 DisableSoundsButton::DisableSoundsButton(double x_, double y_) : Button(x_, y_, 3.0, 1.0) {
 	;
@@ -1021,32 +985,6 @@ void VolumeSlider::hold(int mouse_button, double x_, double) {
 		Mix_Volume(-1, game.music_volume);
 	}
 }
-
-RandomBattleButton::RandomBattleButton(double x_, double y_) : Button(x_, y_, 1.0, 1.0) {
-	counter = 0;
-	current_sprite = 0;
-}
-
-Button::update_return_code RandomBattleButton::update() {
-	counter++;
-	if (counter >= period) {
-		counter = 0;
-		current_sprite++;
-		current_sprite %= 16;
-	}
-	return Button::nothing;
-}
-
-void RandomBattleButton::draw() {
-	game.draw(icon_sheet, x, y, game.with_random_battle, 0, 1, 1);
-	game.draw(unown_questionmark_animated, x, y, current_sprite, 0, 1, 1);
-	game.draw(CSM_font_array[TILE_SIZE / 3].render_shaded("Random battle", Color::black, game.bg_color), x + 1, y + 0.5, middle_left);
-}
-
-void RandomBattleButton::effect(int, double, double) {
-	game.with_random_battle = not game.with_random_battle;
-}
-
 
 BoardButton::BoardButton(Board& b) : board(b), Button(5, 2, 8, 8) {
 	is_first_unhold = true;
@@ -1602,7 +1540,7 @@ void InformationDisplay::re_draw() {
 			rect.x = X;
 			rect.y = Y;
 
-			screen.blit(CSM_font_array[(int)(TILE_SIZE / 2)].render_blended(displayed_piece->Class->name, Color::black), &rect, NULL, top_middle);
+			screen.blit(CSM_font_array[(int)(TILE_SIZE / 2)].render_blended(displayed_piece->Class->name[(int)language], Color::black), &rect, NULL, top_middle);
 			
 			Y += 3 * TILE_SIZE / 4;
 			rect.x = X;
@@ -1647,11 +1585,6 @@ void InformationDisplay::re_draw() {
 bool InformationDisplay::is_active() {
 	return game.show_phone;
 }
-
-Button::update_return_code InformationDisplay::update() {
-	return Button::nothing;
-}
-
 
 ToggleInformationDisplay::ToggleInformationDisplay(double _x, double _y) : Button(_x, _y, 1, 1) {
 	;
@@ -1709,16 +1642,43 @@ void PhoneSwitchPage::effect(int, double, double) {
 }
 
 
-PsyduckChessButton::PsyduckChessButton(double _x, double _y) : Button(_x, _y, 1, 1) {
-	;
+ChangeGameruleButton::ChangeGameruleButton(double _x, double _y, bool* ptr, Surface* _sprite, bool _on_foreground, short _animation_length, short _period, char const* msg0...) : 
+	Button(_x, _y, 1, 1),
+	gamerule_ptr(ptr),
+	sprite(_sprite),
+	on_foreground(_on_foreground),
+	animation_length(_animation_length),
+	period(_period) 
+{
+	va_list args;
+	va_start(args, msg0);
+	message[0] = msg0;
+	for (int i = 1; i < (int)LANGUAGE::NB_OF_LANGUAGE; i++) {
+		message[i] = va_arg(args, char const*);
+	}
+	va_end(args);
 }
 
-void PsyduckChessButton::draw() {
-	game.draw(icon_sheet, x, y, game.with_duck_chess, 0, 1, 1);
-	game.draw(psyduck_sprite, x, y);
-	game.draw(CSM_font_array[TILE_SIZE / 3].render_shaded("Psyduck Chess", Color::black, game.bg_color), x + 1.0, y + 0.5, middle_left);
+void ChangeGameruleButton::draw() {
+	animation_counter++;
+	if (animation_counter >= period) {
+		animation_counter = 0;
+		current_sprite++;
+		current_sprite %= animation_length;
+	}
+
+	if (on_foreground) {
+		game.draw(icon_sheet, x, y, *gamerule_ptr, 0, 1, 1);
+		game.draw(*sprite, x, y, current_sprite, 0, 1, 1);
+	}
+	else {
+		game.draw(*sprite, x, y, current_sprite, 0, 1, 1);
+		game.draw(icon_sheet, x, y, *gamerule_ptr, 0, 1, 1);
+	}
+
+	game.draw(CSM_font_array[TILE_SIZE / 3].render_shaded(message[(int)game.language], Color::black, game.bg_color), x + 1.0, y + 0.5, middle_left);
 }
 
-void PsyduckChessButton::effect(int, double, double) {
-	game.with_duck_chess = not game.with_duck_chess;
+void ChangeGameruleButton::effect(int, double, double) {
+	(*gamerule_ptr) = not (*gamerule_ptr);
 }

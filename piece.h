@@ -14,9 +14,6 @@ inline piece_color operator not(piece_color c) {
 	return (piece_color) ((c < 2) ? (1 - c) : c);
 }
 
-extern bool is_cls_init;
-bool init_all_cls();
-
 class PokeItem;
 
 class Square;
@@ -99,8 +96,8 @@ public:
 
 
 	PieceClass();
-	PieceClass(int _id, char const* _name);
-	PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> constructor, int id, const char* const name);
+	PieceClass(int _id, char const* names...);
+	PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> constructor, int id, const char* const names...);
 
 	bool operator==(void*) const;
 
@@ -108,7 +105,7 @@ public:
 
 	Piece* operator()(Board& board, piece_color color, Square* sq, typing type, PokeItem* item);
 	int id;
-	const char* const name;
+	const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
 #include "assets.h"
@@ -216,7 +213,6 @@ public:
 	virtual ~Piece();
 
 	friend class PokeItem;
-	friend bool init_all_cls();
 };
 
 
@@ -243,8 +239,7 @@ public:
 
 	friend class LeppaBerry;
 	friend class PokeItem;
-	friend bool init_all_cls();
-
+	friend class IronBall;
 };
 
 class Pawn : public virtual Piece {
@@ -267,8 +262,7 @@ public:
 	friend class LeppaBerry;
 	friend class PokeItem;
 	friend class Piece;
-	friend bool init_all_cls();
-
+	friend class IronBall;
 };
 
 class Knight : public virtual Piece {
@@ -284,8 +278,6 @@ public:
 	auto virtual base_do_control(Square& target_square) -> bool;
 
 	friend class PokeItem;
-	friend bool init_all_cls();
-
 };
 
 class Rook : public virtual Piece {
@@ -301,7 +293,6 @@ public:
 	auto virtual base_do_control(Square& target_square) -> bool;
 
 	friend class PokeItem;
-	friend bool init_all_cls();
 
 };
 
@@ -318,8 +309,6 @@ public:
 	auto virtual base_do_control(Square& target_square) -> bool;
 
 	friend class PokeItem;
-	friend bool init_all_cls();
-
 };
 
 class Queen : public virtual Rook, public virtual Bishop {
@@ -335,7 +324,6 @@ public:
 	auto virtual base_do_control(Square& target_square) -> bool;
 
 	friend class PokeItem;
-	friend bool init_all_cls();
 
 };
 

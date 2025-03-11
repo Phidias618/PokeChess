@@ -10,11 +10,11 @@ class BeginGameButton;
 class EndOfGameButton;
 class ExitGameButton;
 class PromotionButton;
-class ChangeGameruleButton;
 class TypingSelectionButton;
 class ConfirmSelectionButton;
 class RandomTypingButton;
 class TextBoxDisplay;
+class ChangeGameruleButton;
 
 #include "assets.h"
 
@@ -31,16 +31,10 @@ protected:
 	double y;
 	double w;
 	double h;
-
-	enum update_return_code : char {
-		nothing = 0,
-		suicide,
-	};
 public:
 
 	Button(double tile_x_, double tile_y_, double tile_w_, double tile_h_);
 
-	virtual update_return_code update() { return Button::nothing; }
 	virtual void draw() {}
 
 	virtual bool is_active();
@@ -227,8 +221,6 @@ class RandomTypingButton : public Button {
 public:
 	RandomTypingButton(double x_, double y_);
 
-	virtual Button::update_return_code update();
-
 	virtual void draw();
 
 	virtual void effect(int, double, double);
@@ -265,8 +257,6 @@ public:
 
 	virtual void activate();
 
-	virtual Button::update_return_code update();
-
 	virtual bool is_active();
 
 	virtual void draw();
@@ -297,8 +287,6 @@ private:
 	Piece* piece;
 public:
 	StatBoostDisplay(Piece* boosted_piece, pokestat boosted_stat, int delay_, int boost_or_debuff);
-
-	virtual Button::update_return_code update();
 
 	virtual void draw();
 };
@@ -333,31 +321,11 @@ class SettingsButton : public Button {
 public:
 	SettingsButton(double x_, double y_);
 
-	virtual Button::update_return_code update();
-
 	virtual void draw();
 
 	virtual void effect(int, double, double);
 };
 
-
-class DisableRNGButton : public Button {
-public:
-	DisableRNGButton(double x_, double y_);
-
-	virtual void draw();
-
-	virtual void effect(int, double, double);
-};
-
-class EnableAntichessButton : public Button {
-public:
-	EnableAntichessButton(double x_, double y_);
-
-	virtual void draw();
-
-	virtual void effect(int, double, double);
-};
 
 class DisableSoundsButton : public Button {
 public:
@@ -379,20 +347,6 @@ public:
 	virtual bool is_on_button(int, double, double);
 
 	virtual void hold(int, double, double);
-};
-
-class RandomBattleButton : public Button {
-	static const int period = FPS / 8;
-	short current_sprite;
-	short counter;
-public:
-	RandomBattleButton(double x_, double y_);
-
-	virtual Button::update_return_code update();
-
-	virtual void draw();
-
-	virtual void effect(int, double, double);
 };
 
 class BoardButton : public Button {
@@ -429,7 +383,6 @@ public:
 
 	virtual void resize();
 
-	virtual Button::update_return_code update();
 
 	friend class PhoneSwitchPage;
 };
@@ -457,9 +410,19 @@ public:
 	virtual void effect(int, double, double);
 };
 
-class PsyduckChessButton : public Button {
+class ChangeGameruleButton : public Button {
+	bool on_foreground;
+	bool* const gamerule_ptr;
+	Surface* const sprite;
+
+	char const* message[(int)LANGUAGE::NB_OF_LANGUAGE];
+
+	const short animation_length = 1;
+	const short period;
+	short current_sprite = 0;
+	short animation_counter = 0;
 public:
-	PsyduckChessButton(double x, double y);
+	ChangeGameruleButton(double x, double y, bool* gamerule_ptr, Surface* sprite, bool on_foreground, short animation_length, short period, char const* msg0...);
 
 	virtual void draw();
 

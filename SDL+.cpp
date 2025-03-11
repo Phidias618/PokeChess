@@ -217,8 +217,8 @@ Surface& Surface::inplace_toric_scroll(int dx, int dy) {
 }
 
 template<int PIXEL_SIZE> Surface Surface::__rotate90() {
-	static_assert(PIXEL_SIZE == 1 or PIXEL_SIZE == 4, "Quoi-feur\n");
-	using UINT = std::conditional_t<PIXEL_SIZE == 1, Uint8, Uint32>;
+	static_assert(PIXEL_SIZE == 1 or PIXEL_SIZE == 2 or PIXEL_SIZE == 4, "Quoi-feur\n");
+	using UINT = std::conditional_t<PIXEL_SIZE == 1, Uint8, std::conditional_t<PIXEL_SIZE == 2, Uint16, Uint32>>;
 
 	if (MUSTLOCK())
 		lock();
@@ -254,8 +254,8 @@ inline void swap(T* v1, T* v2) {
 
 template<const int PIXEL_SIZE>
 Surface& Surface::__rotate180_inplace() {
-	static_assert(PIXEL_SIZE == 1 or PIXEL_SIZE == 4, "Quoi-feur\n");
-	using UINT = std::conditional_t<PIXEL_SIZE == 1, Uint8, Uint32>;
+	static_assert(PIXEL_SIZE == 1 or PIXEL_SIZE == 2 or PIXEL_SIZE == 4, "Quoi-feur\n");
+	using UINT = std::conditional_t<PIXEL_SIZE == 1, Uint8, std::conditional_t<PIXEL_SIZE == 2, Uint16, Uint32>>;
 
 	if (MUSTLOCK())
 		lock();
@@ -278,24 +278,32 @@ Surface Surface::rotate90() {
 	switch (SDL_GetPixelFormatDetails(get_format())->bytes_per_pixel) {
 	case 1: 
 		return __rotate90<1>();
+	case 2:
+		return __rotate90<2>();
 	case 4:
 		return __rotate90<4>();
 	}
+
+	return NULL;
 }
 
 Surface& Surface::rotate180_inplace() {
 	switch (SDL_GetPixelFormatDetails(get_format())->bytes_per_pixel) {
 	case 1:
 		return __rotate180_inplace<1>();
+	case 2:
+		return __rotate180_inplace<2>();
 	case 4:
 		return __rotate180_inplace<4>();
 	}
+
+	return self;
 }
 
 template<int PIXEL_SIZE>
 Surface Surface::__rotate270() {
-	static_assert(PIXEL_SIZE == 1 or PIXEL_SIZE == 4, "Quoi-feur\n");
-	using UINT = std::conditional_t<PIXEL_SIZE == 1, Uint8, Uint32>;
+	static_assert(PIXEL_SIZE == 1 or PIXEL_SIZE == 2 or PIXEL_SIZE == 4, "Quoi-feur\n");
+	using UINT = std::conditional_t<PIXEL_SIZE == 1, Uint8, std::conditional_t<PIXEL_SIZE == 2, Uint16, Uint32>>;
 
 	if (MUSTLOCK())
 		lock();
@@ -326,15 +334,19 @@ Surface Surface::rotate270() {
 	switch (SDL_GetPixelFormatDetails(get_format())->bytes_per_pixel) {
 	case 1:
 		return __rotate270<1>();
+	case 2:
+		return __rotate270<2>();
 	case 4:
 		return __rotate270<4>();
 	}
+
+	return NULL;
 }
 
 template<int PIXEL_SIZE>
 Surface& Surface::__h_flip_inplace() {
-	static_assert(PIXEL_SIZE == 1 or PIXEL_SIZE == 4, "Quoi-feur\n");
-	using UINT = std::conditional_t<PIXEL_SIZE == 1, Uint8, Uint32>;
+	static_assert(PIXEL_SIZE == 1 or PIXEL_SIZE == 2 or PIXEL_SIZE == 4, "Quoi-feur\n");
+	using UINT = std::conditional_t<PIXEL_SIZE == 1, Uint8, std::conditional_t<PIXEL_SIZE == 2, Uint16, Uint32>>;
 
 	if (MUSTLOCK())
 		lock();
@@ -357,8 +369,8 @@ Surface& Surface::__h_flip_inplace() {
 
 template<int PIXEL_SIZE>
 Surface& Surface::__v_flip_inplace() {
-	static_assert(PIXEL_SIZE == 1 or PIXEL_SIZE == 4, "Quoi-feur\n");
-	using UINT = std::conditional_t<PIXEL_SIZE == 1, Uint8, Uint32>;
+	static_assert(PIXEL_SIZE == 1 or PIXEL_SIZE == 2 or PIXEL_SIZE == 4, "Quoi-feur\n");
+	using UINT = std::conditional_t<PIXEL_SIZE == 1, Uint8, std::conditional_t<PIXEL_SIZE == 2, Uint16, Uint32>>;
 
 	if (MUSTLOCK())
 		lock();
@@ -383,16 +395,24 @@ Surface& Surface::h_flip_inplace() {
 	switch (SDL_GetPixelFormatDetails(get_format())->bytes_per_pixel) {
 	case 1:
 		return __h_flip_inplace<1>();
+	case 2:
+		return __h_flip_inplace<2>();
 	case 4:
 		return __h_flip_inplace<4>();
 	}
+
+	return self;
 }
 
 Surface& Surface::v_flip_inplace() {
 	switch (SDL_GetPixelFormatDetails(get_format())->bytes_per_pixel) {
 	case 1:
 		return __v_flip_inplace<1>();
+	case 2:
+		return __v_flip_inplace<2>();
 	case 4:
 		return __v_flip_inplace<4>();
 	}
+
+	return self;
 }

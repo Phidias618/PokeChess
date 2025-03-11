@@ -179,6 +179,7 @@ void Board::init() {
 auto Board::clear() -> void {
 	turn_number = 0;
 	duck = NULL;
+	move_historic.clear();
 	File* row_ptr = grid;
 	File* end_row_ptr = row_ptr + 8;
 	for (; row_ptr < end_row_ptr; row_ptr++) {
