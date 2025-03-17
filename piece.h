@@ -168,6 +168,52 @@ public:
 
 	Square* square;
 	
+	union {
+		Uint64 ability;
+		struct {
+			// the user can't miss not be missed
+			bool ability_no_guard : 1;
+			// the user cannot be crit
+			bool ability_shell_armor : 1;
+			// can steal opposing item on capture if the user is not holding one
+			bool ability_magician : 1;
+			// steal opposing item when captured
+			bool ability_pickpocket : 1;
+			// copy the ability of the last captured piece
+			bool ability_trace : 1;
+			// your item cannot be replaced/remove
+			bool ability_sticky_hold : 1;
+			// you cannot miss
+			bool ability_compound_eye : 1;
+			// if you are not holding an item and capture a piece you will receive honey
+			bool ability_honey_gathering : 1;
+			// same as rocky helmet
+			bool ability_iron_thorns : 1;
+			// +crit chance per captured ally piece
+			bool ability_supreme_overlord : 1;
+			// +crit chance
+			bool ability_sniper : 1;
+			// +crit chance if you are holding flame/toxic orb
+			bool ability_guts : 1;
+			// you can play again if you consume your item (good luck activacting it)
+			bool ability_unburden : 1;
+
+			// gives a fire immunity
+			bool ability_torch : 1;
+			// gives a water immunity
+			bool ability_water_absorb : 1;
+			// gives a grass immunity
+			bool ability_sap_sipper : 1;
+			// gives an electric immunity
+			bool ability_volt_absorb : 1;
+			// gives a ground immunity
+			bool ability_levitate : 1;
+
+			// -1 effectiveness from fire/ice
+			bool ability_thick_fat : 1;
+		};
+	};
+
 	Board& board;
 	
 	Surface sprite;

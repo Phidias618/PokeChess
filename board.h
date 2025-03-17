@@ -87,8 +87,8 @@ public:
 	Duck* duck = NULL;
 	short nb_of_kings[3] = { 0, 0, 0 };
 	
-	short white_death;
-	short black_death;
+	short white_death = 0;
+	short black_death = 0;
 	
 	Piece* white_graveyard[16];
 	Piece* black_graveyard[16];
@@ -109,7 +109,7 @@ public:
 	double crit_rate;
 	double miss_rate;
 
-	bool in_bonus_move;
+	bool in_bonus_move = false;
 
 	int turn_number;
 	bool first_turn = true;

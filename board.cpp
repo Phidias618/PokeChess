@@ -99,7 +99,7 @@ void Square::remove() {
 }
 
 auto Square::clear() -> void {
-	if (piece != NULL) {
+	if (piece != NULL and piece != board->duck) {
 		delete piece;
 		piece = NULL;
 	}
@@ -178,14 +178,16 @@ void Board::init() {
 
 auto Board::clear() -> void {
 	turn_number = 0;
+	
 	duck = NULL;
 	move_historic.clear();
-	File* row_ptr = grid;
-	File* end_row_ptr = row_ptr + 8;
-	for (; row_ptr < end_row_ptr; row_ptr++) {
+	;
+	File* const end_row_ptr = grid + 8;
+	for (File* row_ptr = grid; row_ptr < end_row_ptr; row_ptr++) {
 		row_ptr->clear();
 	}
-
+	if (duck != NULL)
+		delete duck;
 
 	while (white_death --> 0) {
 		delete white_graveyard[white_death];
@@ -197,13 +199,13 @@ auto Board::clear() -> void {
 		delete black_graveyard[black_death];
 		black_graveyard[black_death] = NULL;
 	}
+	black_death = 0;
 
 	nb_of_kings[white] = nb_of_kings[black] = 0;
 
 	king_list[white].clear();
 	king_list[black].clear();
 
-	black_death = 0;
 
 }
 
@@ -221,7 +223,7 @@ void Board::reset() {
 	active_player = white;
 	// last_move_begin_square = NULL;
 	// last_move_end_square = NULL;
-	duck = NULL;
+	
 
 	in_bonus_move = false;
 	first_turn = true;

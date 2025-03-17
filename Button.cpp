@@ -337,7 +337,8 @@ void TypingSelectionButton::effect(int mouse_button, double x_, double y_){
 
 	if ((game.is_type_avaible >> type) & 1) {
 		// the type is still avaible
-		game.is_type_avaible &= ~(1 << type); // makes the typing no longer avaible
+		if (not game.with_AG)
+			game.is_type_avaible &= ~(1 << type); // makes the typing no longer avaible
 		game.is_holding_something = true;
 		game.selected_type = type;
 		game.selected_thing_sprite = typing_icon[type].scale_to(TILE_SIZE / 2, TILE_SIZE / 2, 1);
@@ -380,7 +381,8 @@ void ItemSelectionButton::effect(int mouse_click, double x_, double y_) {
 	switch (mouse_click) {
 	case SDL_BUTTON_LEFT:
 		game.selected_item = &Item;
-		Item.is_avaible = false;
+		if (not game.with_AG)
+			Item.is_avaible = false;
 		game.is_holding_something = true;
 		game.selected_thing_sprite_x_offset = x_;
 		game.selected_thing_sprite_y_offset = y_;
@@ -463,18 +465,26 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 		game.selected_type = typeless;
 		game.is_holding_something = false;
 		typing list[18];
-		iter_typing(t) {
-			list[t] = t;
+		
+
+		if (game.with_AG) {
+			for (int i = 0; i < 16; i++) {
+				list[i] = (typing)(rd() % (fairy - normal) + normal);
+			}
 		}
-
-		std::shuffle(&list[normal], &list[fairy]+1, gen);
-
+		else {
+			iter_typing(t) {
+				list[t] = t;
+			}
+			std::shuffle(&list[normal], &list[fairy] + 1, gen);
+		}
 		if (game.board.active_player == white)
 			for (int i = 0; i < 16; i++) {
 				Square& square = game.board[i % 8][i / 8];
 				if (square.piece != NULL) {
 					square.piece->set_type(list[i]);
-					game.is_type_avaible &= ~(1 << list[i]); // makes the type not avaible
+					if (not game.with_AG)
+						game.is_type_avaible &= ~(1 << list[i]); // makes the type not avaible
 				}
 			}
 		else
@@ -482,7 +492,8 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 				Square& square = game.board[i % 8][i / 8 + 6];
 				if (square.piece != NULL) {
 					square.piece->set_type(list[i]);
-					game.is_type_avaible &= ~(1 << list[i]); // makes the type not avaible
+					if (not game.with_AG)
+						game.is_type_avaible &= ~(1 << list[i]); // makes the type not avaible
 				}
 			}
 
@@ -513,7 +524,8 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 			);
 			for (ItemClass* Item : list) {
 				if (Item->type == normal_item and (game.with_RNG or not Item->is_RNG_dependant) and Item->is_avaible) {
-					Item->is_avaible = false;
+					if (not game.with_AG)
+						Item->is_avaible = false;
 					piece->set_item(NULL);
 					piece->set_item((*Item)(piece));
 					x++;

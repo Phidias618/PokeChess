@@ -52,6 +52,17 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 	if (attacker->type != typeless and defender->type != typeless)
 		matchup = typechart[attacker->type][defender->type];
 
+	if (game.with_ability) {
+		if ((attacker->type == fire and defender->ability_torch) or
+			(attacker->type == water and defender->ability_water_absorb) or
+			(attacker->type == grass and defender->ability_sap_sipper) or
+			(attacker->type == electric and defender->ability_volt_absorb)) 
+		{
+			matchup = immune;
+			is_immune = true;
+		}
+	}
+
 	Board& board = attacker->board;
 
 
@@ -95,12 +106,13 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 		return;
 	}
 
-	
-	if (game.with_RNG and (double)game.RNG() / (double)game.RNG.max() < crit_rate) {
+	if ((not game.with_ability or not defender->ability_shell_armor) and 
+		game.with_RNG and (double)game.RNG() / (double)game.RNG.max() < crit_rate) {
 		do_crit = true;
 		move_again = true;
 	}
-	else if (game.with_RNG and (double)game.RNG() / (double)game.RNG.max() < miss_rate) {
+	else if ((not game.with_ability or not defender->ability_no_guard or not attacker->ability_no_guard or not attacker->ability_compound_eye) and
+		game.with_RNG and (double)game.RNG() / (double)game.RNG.max() < miss_rate) {
 		do_miss = true;
 		cancel = true;
 	}

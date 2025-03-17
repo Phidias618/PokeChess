@@ -98,13 +98,15 @@ public:
 	piece_color winner;
 
 	// some bool that sets the gamerules
-	bool with_typing;
-	bool with_items;
-	bool with_check;
-	bool with_RNG;
-	bool with_random_battle;
+	bool with_typing = true;
+	bool with_items = false;
+	bool with_check = false;
+	bool with_RNG = false;
+	bool with_random_battle = false;
 	bool with_duck_chess = false;
 	bool with_antichess = false;
+	bool with_ability = false;
+	bool with_AG = false;
 
 	bool with_sounds;
 	short music_volume;
