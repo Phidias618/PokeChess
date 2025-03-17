@@ -164,6 +164,8 @@ void Game::draw(Surface surf, double x, double y, anchor c) {
 
 void Game::draw(Surface surf, double x, double y, double ax, double ay, double aw, double ah, anchor c) {
 	SDL_Rect rect;
+	if (surf == NULL)
+		return;
 	rect.x = (int)(x * TILE_SIZE) - (surf->w * (c & 0b11) / 2);
 	rect.y = (int)(y * TILE_SIZE) - (surf->h * (c >> 2) / 2);
 	SDL_Rect a = { (int)(ax * TILE_SIZE), (int)(ay * TILE_SIZE), (int)(aw * TILE_SIZE), (int)(ah * TILE_SIZE) };
