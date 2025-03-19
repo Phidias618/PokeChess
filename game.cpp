@@ -415,7 +415,7 @@ void Game::to_menu() {
 	buttons->add(new ChangeGameruleButton(14.0, 6.0, &with_AG, &AG_icon, true, 1, 0, "", "Anything Goes"));
 	buttons->add(new ChangeGameruleButton(14.0, 7.0, &with_antichess, &pokeball_img, false, 1, 0, "Anti-echec", "Suicide Cup"));
 	buttons->add(new ChangeGameruleButton(14.0, 8.0, &with_duck_chess, &psyduck_sprite, true, 1, 0, "Echec Psykokwak", "Psyduck Chess"));
-	
+	buttons->add(new ChangeGameruleButton(14.0, 9.0, &with_reversed_typechart, new Surface(), true, 1, 0, "Reverse Battle", "Reverse Battle"));
 	reset();
 }
 

@@ -52,6 +52,13 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 	if (attacker->type != typeless and defender->type != typeless)
 		matchup = typechart[attacker->type][defender->type];
 
+	if (game.with_reversed_typechart) {
+		if (matchup == super_effective)
+			matchup = not_very_effective;
+		else if (matchup != neutral)
+			matchup = super_effective;
+	}
+
 	if (game.with_ability) {
 		if ((attacker->type == fire and defender->ability_torch) or
 			(attacker->type == water and defender->ability_water_absorb) or

@@ -107,6 +107,7 @@ public:
 	bool with_antichess = false;
 	bool with_ability = false;
 	bool with_AG = false;
+	bool with_reversed_typechart = false;
 
 	bool with_sounds;
 	short music_volume;
