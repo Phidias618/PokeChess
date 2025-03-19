@@ -36,6 +36,8 @@ enum typing : char {
 };
 
 extern const char* type_str[(long)LANGUAGE::NB_OF_LANGUAGE][18];
+extern const char* type_str_cap[(long)LANGUAGE::NB_OF_LANGUAGE][18];
+
 
 inline typing& operator++(typing& x) {
 	return (typing&)++(char&)x;

@@ -177,11 +177,11 @@ void handle_event(SDL_Event e) {
 		else
 			game.show_type_chart = false;
 
-		if (mbe->button == SDL_BUTTON_LEFT) {
+		/*if (mbe->button == SDL_BUTTON_LEFT) {
 			if (game.state == in_game)
 				game.unselect_piece();
-		}
-		else if (mbe->button == SDL_BUTTON_RIGHT) {
+		}*/
+		if (mbe->button == SDL_BUTTON_RIGHT) {
 			switch (game.state) {
 			case in_game: {
 				int tile_x = (int)x; // x_position in tile coordinates,  relative to the bottom left corner

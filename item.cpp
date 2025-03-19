@@ -4,6 +4,8 @@
 #include "game.h"
 #include "board.h"
 
+
+
 move_data PokeItem::move_to(Square& target) {
 	return holder->base_move_to(target);
 }
@@ -177,7 +179,7 @@ public:
 
 	
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static bool would_be_useful(Piece* piece) {
 		return piece->Class == Pawn::cls && piece->type == old_type;
@@ -210,18 +212,18 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 template<typing t1, typing t2>
-const char* EvolutionStone<t1, t2>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	evolution_stone_names[0][t2],
-	evolution_stone_names[1][t2],
-	evolution_stone_names[2][t2],
-	evolution_stone_names[3][t2],
-	evolution_stone_names[4][t2],
+dstr_t EvolutionStone<t1, t2>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{evolution_stone_names[0][t2], 1},
+	{evolution_stone_names[1][t2], 1},
+	{evolution_stone_names[2][t2], 1},
+	{evolution_stone_names[3][t2], 1},
+	{evolution_stone_names[4][t2], 1},
 };
 
-constexpr const char* to_c_str(std::string str) {
+constexpr char const* to_c_str(std::string str) {
 	char* buffer = new char[str.length()+1];
 	int i = 0;
 	for (char c : str) {
@@ -232,14 +234,14 @@ constexpr const char* to_c_str(std::string str) {
 }
 
 template<typing t1, typing t2>
-const char* EvolutionStone<t1, t2>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	to_c_str(std::string(" - Uniquement pour les pions.\n\
- - Si l'utilisateur est de type ").append(type_str[(int)LANGUAGE::FRENCH][t1]).append(", il deviendra de type ").append(type_str[(int)LANGUAGE::FRENCH][t2]).append(" en évoluant.\n")), // FRENCH
-	to_c_str(std::string(" - Only for pawns.\n\
- - Makes ").append(type_str[(int)LANGUAGE::ENGLISH][t1]).append(" types, evolve into a ").append(type_str[(int)LANGUAGE::ENGLISH][t2]).append(" type.\n")), // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t EvolutionStone<t1, t2>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{to_c_str(std::string(" - Uniquement pour les pions.\n\
+ - Si l'utilisateur est de type ").append(type_str[(int)LANGUAGE::FRENCH][t1]).append(", il deviendra de type ").append(type_str[(int)LANGUAGE::FRENCH][t2]).append(" en évoluant.\n")), 1}, // FRENCH
+	{to_c_str(std::string(" - Only for pawns.\n\
+ - Makes ").append(type_str[(int)LANGUAGE::ENGLISH][t1]).append(" types, evolve into a ").append(type_str[(int)LANGUAGE::ENGLISH][t2]).append(" type.\n")), 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class Everstone : public PokeItem {
@@ -251,7 +253,7 @@ public:
 
 	defdraw(0, 0);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return (piece->Class == Pawn::cls) ? -1 : 0;
@@ -263,23 +265,23 @@ public:
 		return true;
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* Everstone::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	evolution_stone_names[0][0],
-	evolution_stone_names[1][0],
-	evolution_stone_names[2][0],
-	evolution_stone_names[3][0],
-	evolution_stone_names[4][0],
+dstr_t Everstone::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{evolution_stone_names[0][0], 1},
+	{evolution_stone_names[1][0], 1},
+	{evolution_stone_names[2][0], 1},
+	{evolution_stone_names[3][0], 1},
+	{evolution_stone_names[4][0], 1},
 };
 
-const char* Everstone::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Empêche son porteur d'évoluer.\n", // FRENCH
-	" - Prevents its user from evolving.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t Everstone::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Empêche son porteur d'évoluer.\n", 1}, // FRENCH
+	{" - Prevents its user from evolving.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 const char* resistance_berry_names[(int)LANGUAGE::NB_OF_LANGUAGE][18] = {
@@ -399,7 +401,7 @@ public:
 
 	defdraw(1, type);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		const effectiveness e = typechart[type][piece->type];
@@ -423,33 +425,33 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
 template<typing type>
-const char* ResistanceBerry<type>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	type != typeless ? resistance_berry_names[0][type] : "",
-	type != typeless ? resistance_berry_names[1][type] : "",
-	type != typeless ? resistance_berry_names[2][type] : "",
-	type != typeless ? resistance_berry_names[3][type] : "",
-	type != typeless ? resistance_berry_names[4][type] : "",
+dstr_t ResistanceBerry<type>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{type != typeless ? resistance_berry_names[0][type] : "", 1},
+	{type != typeless ? resistance_berry_names[1][type] : "", 1},
+	{type != typeless ? resistance_berry_names[2][type] : "", 1},
+	{type != typeless ? resistance_berry_names[3][type] : "", 1},
+	{type != typeless ? resistance_berry_names[4][type] : "", 1},
 };
 
 template<typing type>
-const char* ResistanceBerry<type>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	to_c_str(std::string(" - Retire une faiblesse contre le type ").append(type_str[(int)LANGUAGE::FRENCH][type]).append(".\n")), // FRENCH
-	to_c_str(std::string(" - Removes a ").append(type_str[(int)LANGUAGE::ENGLISH][type]).append(" type weakness.\n")), // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t ResistanceBerry<type>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{to_c_str(std::string(" - Retire une faiblesse contre le type ").append(type_str[(int)LANGUAGE::FRENCH][type]).append(".\n")), 1}, // FRENCH
+	{to_c_str(std::string(" - Removes a ").append(type_str[(int)LANGUAGE::ENGLISH][type]).append(" type weakness.\n")), 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
-const char* ResistanceBerry<normal>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Donne une resistance contre le type normal.\n", // FRENCH
-	" - Gives a normal type resistance.\n", // ENGLISH
-	"",
-	"",
-	"",
+dstr_t ResistanceBerry<normal>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Donne une resistance contre le type normal.\n", 1}, // FRENCH
+	{" - Gives a normal type resistance.\n", 1}, // ENGLISH
+	{"", 1},
+	{"", 1},
+	{"", 1},
 };
 
 class RingTarget : public PokeItem {
@@ -458,9 +460,9 @@ public:
 	RingTarget(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::basic, 0x7FFFFFFF, IC) {
 	}
 
-	defdraw(4, 0);
+	defdraw(5, 0);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		int counter = 0;
@@ -486,23 +488,23 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* RingTarget::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Point de Mire", // FRENCH
-	"Ring Target", // ENGLISH
-	"Zielscheibe", // GERMAN
-	"Blanco", // SPANISH
-	"Facilsaglio", // ITALIAN
+dstr_t RingTarget::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Point de Mire", 1}, // FRENCH
+	{"Ring Target", 1}, // ENGLISH
+	{"Zielscheibe", 1}, // GERMAN
+	{"Blanco", 1}, // SPANISH
+	{"Facilsaglio", 1}, // ITALIAN
 };
 
-const char* RingTarget::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Retire toutes les immunités de son utilisateur.\n", // FRENCH
-	" - Removes all the immunity of its user.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t RingTarget::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Retire toutes les immunités de son utilisateur.\n", 1}, // FRENCH
+	{" - Removes all the immunity of its user.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 template <typing type>
@@ -514,9 +516,9 @@ public:
 		;
 	}
 
-	defdraw(2, type);
+	defdraw(3, type);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 
 	static int usefulness_tier(Piece* piece) {
@@ -557,40 +559,40 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* ImmunityItem<ground>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Ballon", // FRENCH
-	"Air Balloon", // ENGLISH
-	"Luftballon", // GERMAN
-	"Globo Helio", // SPANISH
-	"Palloncino", // ITALIAN
+dstr_t ImmunityItem<ground>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Ballon", 1}, // FRENCH
+	{"Air Balloon", 1}, // ENGLISH
+	{"Luftballon", 1}, // GERMAN
+	{"Globo Helio", 1}, // SPANISH
+	{"Palloncino", 1}, // ITALIAN
 };
 
-const char* ImmunityItem<fire>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Boule de Neige", // FRENCH
-	"Snowball", // ENGLISH
-	"Schneeball", // GERMAN
-	"Bola de Nieve", // SPANISH
-	"Palla di Neve", // ITALIAN
+dstr_t ImmunityItem<fire>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Boule de Neige", 1}, // FRENCH
+	{"Snowball", 1}, // ENGLISH
+	{"Schneeball", 1}, // GERMAN
+	{"Bola de Nieve", 1}, // SPANISH
+	{"Palla di Neve", 1}, // ITALIAN
 };
 
-const char* ImmunityItem<electric>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Pile", // FRENCH
-	"Cell Battery", // ENGLISH
-	"Akku", // GERMAN
-	"Pila", // SPANISH
-	"Ricaripila", // ITALIAN
+dstr_t ImmunityItem<electric>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Pile", 1}, // FRENCH
+	{"Cell Battery", 1}, // ENGLISH
+	{"Akku", 1}, // GERMAN
+	{"Pila", 1}, // SPANISH
+	{"Ricaripila", 1}, // ITALIAN
 };
 
 template<typing type>
-const char* ImmunityItem<type>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	to_c_str(std::string(" - Utilisable une unique fois.\n - Donne une immunité contre le type ").append(type_str[(int)LANGUAGE::FRENCH][type]).append(".\n")), // FRENCH
-	to_c_str(std::string(" - One time use.\n - Gives an immunity to ").append(type_str[(int)LANGUAGE::ENGLISH][type]).append(".\n")), // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t ImmunityItem<type>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{to_c_str(std::string(" - Utilisable une unique fois.\n - Donne une immunité contre le type ").append(type_str[(int)LANGUAGE::FRENCH][type]).append(".\n")), 1}, // FRENCH
+	{to_c_str(std::string(" - One time use.\n - Gives an immunity to ").append(type_str[(int)LANGUAGE::ENGLISH][type]).append(".\n")), 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class ExpertBelt : public PokeItem {
@@ -599,9 +601,9 @@ public:
 		;
 	}
 
-	defdraw(3, 13);
+	defdraw(4, 13);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 
 	static int usefulness_tier(Piece* piece) {
@@ -623,23 +625,23 @@ public:
 			data.miss_rate = -INFINITY;
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* ExpertBelt::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Ceinture Pro", // FRENCH
-	"Expert Belt", // ENGLISH
-	"Expertengurt", // GERMAN
-	"Cinta Experto", // SPANISH
-	"Abilcintura", // ITALIAN
+dstr_t ExpertBelt::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Ceinture Pro", 1}, // FRENCH
+	{"Expert Belt", 1}, // ENGLISH
+	{"Expertengurt", 1}, // GERMAN
+	{"Cinta Experto", 1}, // SPANISH
+	{"Abilcintura", 1}, // ITALIAN
 };
 
-const char* ExpertBelt::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Empeche d'echouer les attaques super efficace.\n", // FRENCH
-	" - Prevents super effective move from missing.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t ExpertBelt::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Empeche d'echouer les attaques super efficace.\n", 1}, // FRENCH
+	{" - Prevents super effective move from missing.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class BlunderPolicy : public PokeItem {
@@ -648,9 +650,9 @@ public:
 		;
 	}
 
-	defdraw(3, 9);
+	defdraw(4, 9);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	virtual void accuracy_modifier(move_data& data) {
 		data.miss_rate = -INFINITY; // cannot miss
@@ -661,27 +663,27 @@ public:
 		return 2;
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
 
 
-const char* BlunderPolicy::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Assurance Échec", // FRENCH
-	"Blunder Policy", // ENGLISH
-	"Fehlschlagschutz", // GERMAN
-	"Seguro Fallo", // SPANISH
-	"Fiascopolizza", // ITALIAN
+dstr_t BlunderPolicy::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Assurance Échec", 1}, // FRENCH
+	{"Blunder Policy", 1}, // ENGLISH
+	{"Fehlschlagschutz", 1}, // GERMAN
+	{"Seguro Fallo", 1}, // SPANISH
+	{"Fiascopolizza", 1}, // ITALIAN
 };
 
-const char* BlunderPolicy::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Utilisable une unique fois.\n\
- - Son utilisateur ne peut pas echoué sa premiere attaque.\n", // FRENCH
-	" - One time use.\n\
- - Its user cannot miss his first attack.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t BlunderPolicy::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Utilisable une unique fois.\n\
+ - Son utilisateur ne peut pas echoué sa premiere attaque.\n", 1}, // FRENCH
+	{" - One time use.\n\
+ - Its user cannot miss his first attack.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 #define defctor(name) name(Piece* piece, ItemClass& IC) : PokeItem(piece, IC) {}
@@ -689,9 +691,9 @@ class BrightPowder : public PokeItem {
 public:
 	defctor(BrightPowder);
 
-	defdraw(3, 15);
+	defdraw(4, 15);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 
 	virtual void evasion_modifier(move_data& data) {
@@ -702,23 +704,23 @@ public:
 		return 2;
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* BrightPowder::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Poudre Claire", // FRENCH
-	"Bright Powder", // ENGLISH
-	"Blendpuder", // GERMAN
-	"Polvo Brillo", // SPANISH
-	"Luminpolvere", // ITALIAN
+dstr_t BrightPowder::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Poudre Claire", 1}, // FRENCH
+	{"Bright Powder", 1}, // ENGLISH
+	{"Blendpuder", 1}, // GERMAN
+	{"Polvo Brillo", 1}, // SPANISH
+	{"Luminpolvere", 1}, // ITALIAN
 };
 
-const char* BrightPowder::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Augmente légerement l'ésquive.\n", // FRENCH
-	" - Increase slightly evasion.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t BrightPowder::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Augmente légerement l'ésquive.\n", 1}, // FRENCH
+	{" - Increase slightly evasion.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class LifeOrb : public PokeItem {
@@ -726,9 +728,9 @@ class LifeOrb : public PokeItem {
 public:
 	defctor(LifeOrb);
 
-	defdraw(3, 5);
+	defdraw(4, 5);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 
 	virtual void crit_modifier(move_data& data) {
@@ -756,25 +758,25 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* LifeOrb::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Orbe Vie", // FRENCH
-	"Life Orb", // ENGLISH
-	"Leben-Orb", // GERMAN
-	"Vidasfera", // SPANISH
-	"Assorbisfera", // ITALIAN
+dstr_t LifeOrb::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Orbe Vie", 1}, // FRENCH
+	{"Life Orb", 1}, // ENGLISH
+	{"Leben-Orb", 1}, // GERMAN
+	{"Vidasfera", 1}, // SPANISH
+	{"Assorbisfera", 1}, // ITALIAN
 };
 
-const char* LifeOrb::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Son Utilisateur a 1/10 chance de mourir a chaque fois qu'il attaque.\n\
- - Augmente énormément le taux de coup critique.\n", // FRENCH
-	" - Its user has a 1 / 10 chance to die each time he attacks.\n\
- - Greatly increase critical hit rate.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t LifeOrb::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Son Utilisateur a 1/10 chance de mourir a chaque fois qu'il attaque.\n\
+ - Augmente énormément le taux de coup critique.\n", 1}, // FRENCH
+	{" - Its user has a 1 / 10 chance to die each time he attacks.\n\
+ - Greatly increase critical hit rate.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class LoadedDice : public PokeItem {
@@ -783,9 +785,9 @@ public:
 		;
 	}
 
-	defdraw(3, 6);
+	defdraw(4, 6);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return 2;
@@ -807,23 +809,23 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* LoadedDice::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"De Pipe", // FRENCH
-	"Loaded Dice", // ENGLISH
-	"Gezinkter Würfel", // GERMAN
-	"Dado Trucado", // SPANISH
-	"Dado Truccato", // ITALIAN
+dstr_t LoadedDice::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"De Pipe", 1}, // FRENCH
+	{"Loaded Dice", 1}, // ENGLISH
+	{"Gezinkter Würfel", 1}, // GERMAN
+	{"Dado Trucado", 1}, // SPANISH
+	{"Dado Truccato", 1}, // ITALIAN
 };
 
-const char* LoadedDice::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Chaque utilisation d'aléatoire concernant son utilisateur est effectuée avec \"avantage\".\n", // FRENCH
-	" - Each rng roll affecting its user is perform with \"advantage\".\n" // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t LoadedDice::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Chaque utilisation d'aléatoire concernant son utilisateur est effectuée avec \"avantage\".\n", 1}, // FRENCH
+	{" - Each rng roll affecting its user is perform with \"advantage\".\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class RockyHelmet : public PokeItem {
@@ -831,9 +833,9 @@ class RockyHelmet : public PokeItem {
 public:
 	defctor(RockyHelmet);
 	
-	defdraw(3, 0);
+	defdraw(4, 0);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return 2;
@@ -856,23 +858,23 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* RockyHelmet::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Casque Brut", // FRENCH
-	"Rocky Helmet", // ENGLISH
-	"Beulenhelm", // GERMAN
-	"Casco dentado", // SPANISH
-	"Bitorzolelmo", // ITALIAN
+dstr_t RockyHelmet::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Casque Brut", 1}, // FRENCH
+	{"Rocky Helmet", 1}, // ENGLISH
+	{"Beulenhelm", 1}, // GERMAN
+	{"Casco dentado", 1}, // SPANISH
+	{"Bitorzolelmo", 1}, // ITALIAN
 };
 
-const char* RockyHelmet::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Si son utilisateur meurt d'une piece enemie, cette piece a une chance de mourrir.\n", // FRENCH
-	" - If its user die to an enemy piece, this piece has a chance to die.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t RockyHelmet::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Si son utilisateur meurt d'une piece enemie, cette piece a une chance de mourrir.\n", 1}, // FRENCH
+	{" - If its user die to an enemy piece, this piece has a chance to die.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class Metronome : public PokeItem {
@@ -880,21 +882,21 @@ class Metronome : public PokeItem {
 public:
 	static const bool RNG = true;
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 
 	Metronome(Piece* piece, ItemClass& IC) : PokeItem(piece, IC) {
 		nb_of_consecutives = 0;
 	};
 
-	defdraw(3, 14);
+	defdraw(4, 14);
 
 	static int usefulness_tier(Piece* piece) {
 		return 2;
 	}
 
 	virtual void crit_modifier(move_data& data) {
-		for (move_data& const d : holder->board.move_historic) {
+		for (move_data const d : holder->board.move_historic) {
 			if (d.attacker->color == holder->color) {
 				if (d.attacker == holder && d.defender != NULL) {
 					nb_of_consecutives++;
@@ -910,23 +912,23 @@ public:
 		data.crit_rate *= nb_of_consecutives;
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* Metronome::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Métronome", // FRENCH
-	"Metronome", // ENGLISH
-	"Metronom", // GERMAN
-	"Metrónomo", // SPANISH
-	"Plessimetro", // ITALIAN
+dstr_t Metronome::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Métronome", 1}, // FRENCH
+	{"Metronome", 1}, // ENGLISH
+	{"Metronom", 1}, // GERMAN
+	{"Metrónomo", 1}, // SPANISH
+	{"Plessimetro", 1}, // ITALIAN
 };
 
-const char* Metronome::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Augmente le taux de critique pour chaques coups consecutifs.\n", // FRENCH
-	" - Increase critical hit rate for each consecutive moves.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t Metronome::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Augmente le taux de critique pour chaques coups consecutifs.\n", 1}, // FRENCH
+	{" - Increase critical hit rate for each consecutive moves.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class RedCard : public PokeItem {
@@ -934,11 +936,11 @@ class RedCard : public PokeItem {
 public:
 	static const bool RNG = false;
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	defctor(RedCard);
 
-	defdraw(3, 1);
+	defdraw(4, 1);
 
 	static int usefulness_tier(Piece* piece) {
 		return 2;
@@ -962,23 +964,23 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* RedCard::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Carton Rouge", // FRENCH
-	"Red Card", // ENGLISH
-	"Rote Karte", // GERMAN
-	"tarjeta roja", // SPANISH
-	"Cartelrosso", // ITALIAN
+dstr_t RedCard::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Carton Rouge", 1}, // FRENCH
+	{"Red Card", 1}, // ENGLISH
+	{"Rote Karte", 1}, // GERMAN
+	{"tarjeta roja", 1}, // SPANISH
+	{"Cartelrosso", 1}, // ITALIAN
 };
 
-const char* RedCard::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Si son utilisateur meurt d'une attaque qui résulte en un coup bonus, l'attaquant revient sur sa case de départ.\n", // FRENCH
-	" - If its user die to an attack that results in a bonus move, the attacker gets send back to its starting square.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t RedCard::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Si son utilisateur meurt d'une attaque qui résulte en un coup bonus, l'attaquant revient sur sa case de départ.\n", 1}, // FRENCH
+	{" - If its user die to an attack that results in a bonus move, the attacker gets send back to its starting square.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class StickyBarbs : public PokeItem {
@@ -986,9 +988,9 @@ class StickyBarbs : public PokeItem {
 public:
 	defctor(StickyBarbs);
 
-	defdraw(3, 2);
+	defdraw(4, 2);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return 2;
@@ -1025,25 +1027,25 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* StickyBarbs::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Piquants", // FRENCH
-	"Sticky Barb", // ENGLISH
-	"Klettdorn", // GERMAN
-	"Toxiestrella", // SPANISH
-	"Vischiopunta", // ITALIAN
+dstr_t StickyBarbs::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Piquants", 1}, // FRENCH
+	{"Sticky Barb", 1}, // ENGLISH
+	{"Klettdorn", 1}, // GERMAN
+	{"Toxiestrella", 1}, // SPANISH
+	{"Vischiopunta", 1}, // ITALIAN
 };
 
-const char* StickyBarbs::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Son utilisateur a une chance de mourrir quand il se déplace\n\
- - Colle aux pièces ennemie.\n", // FRENCH
-	" - Its user has a chance to die each time it moves\n\
- - Stick to enemy piece.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t StickyBarbs::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Son utilisateur a une chance de mourrir quand il se déplace\n\
+ - Colle aux pièces ennemie.\n", 1}, // FRENCH
+	{" - Its user has a chance to die each time it moves\n\
+ - Stick to enemy piece.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class AssaultVest : public PokeItem {
@@ -1052,34 +1054,34 @@ public:
 
 	defctor(AssaultVest);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return -2;
 	}
 
-	defdraw(4, 1);
+	defdraw(5, 1);
 	virtual bool is_move_disallowed(Square& target) {
 		return target.piece == NULL;
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* AssaultVest::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Veste de Combat", // FRENCH
-	"Assault Vest", // ENGLISH
-	"Offensivweste", // GERMAN
-	"Chaleco Asalto", // SPANISH
-	"Corpetto assalto", // ITALIAN
+dstr_t AssaultVest::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Veste de Combat", 1}, // FRENCH
+	{"Assault Vest", 1}, // ENGLISH
+	{"Offensivweste", 1}, // GERMAN
+	{"Chaleco Asalto", 1}, // SPANISH
+	{"Corpetto assalto", 1}, // ITALIAN
 };
 
-const char* AssaultVest::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Empêche les coups qui ne sont pas des captures.\n", // FRENCH
-	" - Blocks non capturing moves.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t AssaultVest::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Empêche les coups qui ne sont pas des captures.\n", 1}, // FRENCH
+	{" - Blocks non capturing moves.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class ShedShell : public PokeItem {
@@ -1089,9 +1091,9 @@ public:
 
 	defctor(ShedShell);
 
-	defdraw(3, 16);
+	defdraw(4, 16);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return (piece->Class == Knight::cls) ? 0 : 2;
@@ -1133,34 +1135,34 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* ShedShell::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Carapace Mue", // FRENCH
-	"Shed Shell", // ENGLISH
-	"Wechselhülle", // GERMAN
-	"Muda Concha", // SPANISH
-	"Disfoguscio", // ITALIAN
+dstr_t ShedShell::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Carapace Mue", 1}, // FRENCH
+	{"Shed Shell", 1}, // ENGLISH
+	{"Wechselhülle", 1}, // GERMAN
+	{"Muda Concha", 1}, // SPANISH
+	{"Disfoguscio", 1}, // ITALIAN
 };
 
-const char* ShedShell::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Utilisable une seule fois.\n\
- - Si vous êtes piegé vous pouvez vous deplacez en cavalier.\n", // FRENCH
-	" - One time use.\n\
- - If you are trapped you can perform a knight move.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t ShedShell::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Utilisable une seule fois.\n\
+ - Si vous êtes piegé vous pouvez vous deplacez en cavalier.\n", 1}, // FRENCH
+	{" - One time use.\n\
+ - If you are trapped you can perform a knight move.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class ScopeLens : public PokeItem {
 public:
 	defctor(ScopeLens);
 
-	defdraw(3, 12);
+	defdraw(4, 12);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return 2;
@@ -1170,32 +1172,32 @@ public:
 		data.crit_rate *= 1.3;
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* ScopeLens::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Lentilscope", // FRENCH
-	"Scope Lens", // ENGLISH
-	"Scope-Linse", // GERMAN
-	"Periscopio", // SPANISH
-	"Mirino", // ITALIAN
+dstr_t ScopeLens::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Lentilscope", 1}, // FRENCH
+	{"Scope Lens", 1}, // ENGLISH
+	{"Scope-Linse", 1}, // GERMAN
+	{"Periscopio", 1}, // SPANISH
+	{"Mirino", 1}, // ITALIAN
 };
 
-const char* ScopeLens::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Augmente légerement le taux de critique.\n", // FRENCH
-	" - Increase slightly critical hit rate.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t ScopeLens::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Augmente légerement le taux de critique.\n", 1}, // FRENCH
+	{" - Increase slightly critical hit rate.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class WideLens : public PokeItem {
 public:
 	defctor(WideLens);
 
-	defdraw(3, 11);
+	defdraw(4, 11);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return 2;
@@ -1205,32 +1207,32 @@ public:
 		data.miss_rate /= 2;
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* WideLens::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Loupe", // FRENCH
-	"Wide Lens", // ENGLISH
-	"Grosslinse", // GERMAN
-	"Lupa", // SPANISH
-	"Grandelente", // ITALIAN
+dstr_t WideLens::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Loupe", 1}, // FRENCH
+	{"Wide Lens", 1}, // ENGLISH
+	{"Grosslinse", 1}, // GERMAN
+	{"Lupa", 1}, // SPANISH
+	{"Grandelente", 1}, // ITALIAN
 };
 
-const char* WideLens::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Augmente la precision.\n", // FRENCH
-	" - Increase accuracy.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t WideLens::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Augmente la precision.\n", 1}, // FRENCH
+	{" - Increase accuracy.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class Honey : public PokeItem {
 public:
 	static const bool RNG = false;
 
-	defdraw(2, bug);
+	defdraw(3, bug);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	Honey(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::honey, 0, IC) {
 		;
@@ -1241,32 +1243,32 @@ public:
 	}
 
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* Honey::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Miel", // FRENCH
-	"Honey", // ENGLISH
-	"Honig", // GERMAN
-	"Miel", // SPANISH
-	"Miele", // ITALIAN
+dstr_t Honey::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Miel", 1}, // FRENCH
+	{"Honey", 1}, // ENGLISH
+	{"Honig", 1}, // GERMAN
+	{"Miel", 1}, // SPANISH
+	{"Miele", 1}, // ITALIAN
 };
 
-const char* Honey::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Les types insectes adverse ne peuvent resister a l'envie de miel.\n", // FRENCH
-	" - Opposing bug types cannot resist the attraction of honey.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t Honey::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Les types insectes adverse ne peuvent resister a l'envie de miel.\n", 1}, // FRENCH
+	{" - Opposing bug types cannot resist the attraction of honey.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class ProtectivePads : public PokeItem {
 public:
 	static const bool RNG = false;
 
-	defdraw(3, 8);
+	defdraw(4, 8);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	ProtectivePads(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::protective_pads, 0, IC) {
 		;
@@ -1276,32 +1278,32 @@ public:
 		return 2;
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* ProtectivePads::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Parre-Effet", // FRENCH
-	"Protective Pads", // ENGLISH
-	"Schutzpolster", // GERMAN
-	"Paracontacto", // SPANISH
-	"Smorzaurti", // ITALIAN
+dstr_t ProtectivePads::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Parre-Effet", 1}, // FRENCH
+	{"Protective Pads", 1}, // ENGLISH
+	{"Schutzpolster", 1}, // GERMAN
+	{"Paracontacto", 1}, // SPANISH
+	{"Smorzaurti", 1}, // ITALIAN
 };
 
-const char* ProtectivePads::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Ignore les objets ennemi quand vous attaquez.\n", // FRENCH
-	" - Ignore opposing items when attacking.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t ProtectivePads::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Ignore les objets ennemi quand vous attaquez.\n", 1}, // FRENCH
+	{" - Ignore opposing items when attacking.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class SafetyGoogles : public PokeItem {
 public:
 	static const bool RNG = false;
 
-	defdraw(3, 7);
+	defdraw(4, 7);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	SafetyGoogles(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::safety_googles, 0, IC) {
 		;
@@ -1311,23 +1313,23 @@ public:
 		return 2;
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* SafetyGoogles::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Lunettes Filtre", // FRENCH
-	"Safety Googles", // ENGLISH
-	"Shutzbrille", // GERMAN
-	"Gafa Protectora", // SPANISH
-	"Visierantisabbia", // ITALIAN
+dstr_t SafetyGoogles::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Lunettes Filtre", 1}, // FRENCH
+	{"Safety Googles", 1}, // ENGLISH
+	{"Shutzbrille", 1}, // GERMAN
+	{"Gafa Protectora", 1}, // SPANISH
+	{"Visierantisabbia", 1}, // ITALIAN
 };
 
-const char* SafetyGoogles::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Ignore les objets adverse vous êtes attaqué.\n", // FRENCH
-	" - Ignores opposing items when attacked.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t SafetyGoogles::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Ignore les objets adverse vous êtes attaqué.\n", 1}, // FRENCH
+	{" - Ignores opposing items when attacked.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class NormalGem : public PokeItem {
@@ -1336,9 +1338,9 @@ public:
 
 	defctor(NormalGem);
 
-	defdraw(2, normal);
+	defdraw(3, normal);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return (piece->type == normal) ? 2 : 0;
@@ -1356,27 +1358,27 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* NormalGem::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Joyau Normal", // FRENCH
-	"Normal Gem", // ENGLISH
-	"Normaljuwel", // GERMAN
-	"Gema Normal", // SPANISH
-	"Bijounormale", // ITALIAN
+dstr_t NormalGem::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Joyau Normal", 1}, // FRENCH
+	{"Normal Gem", 1}, // ENGLISH
+	{"Normaljuwel", 1}, // GERMAN
+	{"Gema Normal", 1}, // SPANISH
+	{"Bijounormale", 1}, // ITALIAN
 };
 
-const char* NormalGem::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Uniquement pour les pieces de type normal\n\
+dstr_t NormalGem::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Uniquement pour les pieces de type normal\n\
  - Utilisable une seule fois.\n\
- - Vôtre première attaque sera super efficace.\n", // FRENCH
-	" - Only for normal type pieces.\n\
+ - Votre premiere attaque sera super efficace.\n", 1}, // FRENCH
+	{" - Only for normal type pieces.\n\
  - One time use.\n\
- - Vôtre première attaque sera super efficace.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+ - Your first attack will gain one effectiveness.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class LeppaBerry : public PokeItem {
@@ -1385,9 +1387,9 @@ public:
 
 	defctor(LeppaBerry);
 
-	defdraw(3, 10);
+	defdraw(4, 10);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return (piece->Class == King::cls or piece->Class == Pawn::cls) ? 2 : 0;
@@ -1416,25 +1418,25 @@ public:
 		return data;
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* LeppaBerry::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Baie Mepo", // FRENCH
-	"Leppa Berry", // ENGLISH
-	"Jonagobeere", // GERMAN
-	"Baya Zanama", // SPANISH
-	"Baccamela", // ITALIAN
+dstr_t LeppaBerry::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Baie Mepo", 1}, // FRENCH
+	{"Leppa Berry", 1}, // ENGLISH
+	{"Jonagobeere", 1}, // GERMAN
+	{"Baya Zanama", 1}, // SPANISH
+	{"Baccamela", 1}, // ITALIAN
 };
 
-const char* LeppaBerry::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Utilisable une seule fois.\n\
- - Permet de refaire un deplacement special.\n", // FRENCH
-	" - One time use.\n\
- - Allows to perform special move a second time.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t LeppaBerry::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Utilisable une seule fois.\n\
+ - Permet de refaire un deplacement special.\n", 1}, // FRENCH
+	{" - One time use.\n\
+ - Allows to perform special move a second time.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class BlackSludge : public PokeItem {
@@ -1442,9 +1444,9 @@ class BlackSludge : public PokeItem {
 public:
 	defctor(BlackSludge);
 
-	defdraw(2, poison);
+	defdraw(3, poison);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return -(piece->type == poison);
@@ -1467,23 +1469,23 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* BlackSludge::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Boue Noire", // FRENCH
-	"Black Sludge", // ENGLISH
-	"Giftschleim", // GERMAN
-	"Lodo Negro", // SPANISH
-	"Fangopece", // ITALIAN
+dstr_t BlackSludge::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Boue Noire", 1}, // FRENCH
+	{"Black Sludge", 1}, // ENGLISH
+	{"Giftschleim", 1}, // GERMAN
+	{"Lodo Negro", 1}, // SPANISH
+	{"Fangopece", 1}, // ITALIAN
 };
 
-const char* BlackSludge::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - A une chance de tuer les pièces qui ne sont pas de type poison quand elles se déplacent.\n", // FRENCH
-	" - Has a chance to kill non poison types piece when they move.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t BlackSludge::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - A une chance de tuer les pièces qui ne sont pas de type poison quand elles se déplacent.\n", 1}, // FRENCH
+	{" - Has a chance to kill non poison types piece when they move.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class HeavyDutyBoots : public PokeItem {
@@ -1491,9 +1493,9 @@ public:
 	static const bool RNG = false;
 	defctor(HeavyDutyBoots);
 
-	defdraw(2, rock);
+	defdraw(3, rock);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return (typechart[piece->type][rock] == not_very_effective) ? 2 : 0;
@@ -1510,23 +1512,23 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* HeavyDutyBoots::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Grosses Bottes", // FRENCH
-	"Heavy-Duty Boots", // ENGLISH
-	"Plateauschuhe", // GERMAN
-	"Botas Gruesas", // SPANISH
-	"Scarponi Robusti", // ITALIAN
+dstr_t HeavyDutyBoots::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Grosses Bottes", 1}, // FRENCH
+	{"Heavy-Duty Boots", 1}, // ENGLISH
+	{"Plateauschuhe", 1}, // GERMAN
+	{"Botas Gruesas", 1}, // SPANISH
+	{"Scarponi Robusti", 1}, // ITALIAN
 };
 
-const char* HeavyDutyBoots::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - L'utilisateur ne sera plus resité par le type roche.\n", // FRENCH
-	" - The user wont be resisted by rock types anymore.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t HeavyDutyBoots::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - L'utilisateur ne sera plus resité par le type roche.\n", 1}, // FRENCH
+	{" - The user wont be resisted by rock types anymore.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class LightBall : public PokeItem {
@@ -1539,9 +1541,9 @@ public:
 		}
 	}
 
-	defdraw(3, electric);
+	defdraw(4, electric);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return (piece->Class == Pawn::cls) ? (piece->type == typeless) + 2 * (piece->type == electric) : 0;
@@ -1558,25 +1560,25 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* LightBall::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Balle Lumière", // FRENCH
-	"Light Ball", // ENGLISH
-	"Kugelblitz", // GERMAN
-	"Bola Luminosa", // SPANISH
-	"Elettropalla", // ITALIAN
+dstr_t LightBall::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Balle Lumiere", 1}, // FRENCH
+	{"Light Ball", 1}, // ENGLISH
+	{"Kugelblitz", 1}, // GERMAN
+	{"Bola Luminosa", 1}, // SPANISH
+	{"Elettropalla", 1}, // ITALIAN
 };
 
-const char* LightBall::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Uniquement pour les pions de type électrique.\n\
- - Augmente le taux de coup critique.\n", // FRENCH
-	" - Only for electric type pawns.\n\
- - Increases critical hit chance.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t LightBall::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Uniquement pour les pions de type électrique.\n\
+ - Augmente le taux de coup critique.\n", 1}, // FRENCH
+	{" - Only for electric type pawns.\n\
+ - Increases critical hit chance.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class Eviolite : public PokeItem {
@@ -1585,9 +1587,9 @@ public:
 
 	defctor(Eviolite);
 
-	defdraw(3, 3);
+	defdraw(4, 3);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return 2 * (piece->Class == Pawn::cls);
@@ -1604,25 +1606,25 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* Eviolite::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Évoluroc", // FRENCH
-	"Eviolite", // ENGLISH
-	"Evolith", // GERMAN
-	"Mineral Evolutivo", // SPANISH
-	"Mineral Evol", // ITALIAN
+dstr_t Eviolite::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Évoluroc", 1}, // FRENCH
+	{"Eviolite", 1}, // ENGLISH
+	{"Evolith", 1}, // GERMAN
+	{"Mineral Evolutivo", 1}, // SPANISH
+	{"Mineral Evol", 1}, // ITALIAN
 };
 
-const char* Eviolite::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Uniquement pour les pions.\n\
- - Retire toute les faiblesses.\n", // FRENCH
-	" - Only for pawns.\n\
- - Remove all weaknesses.\n", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t Eviolite::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Uniquement pour les pions.\n\
+ - Retire toute les faiblesses.\n", 1}, // FRENCH
+	{" - Only for pawns.\n\
+ - Remove all weaknesses.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 class Baguette : public PokeItem {
@@ -1631,9 +1633,9 @@ public:
 
 	defctor(Baguette);
 
-	defdraw(4, 3);
+	defdraw(5, 3);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return 2 * (piece->Class == Pawn::cls);
@@ -1645,23 +1647,23 @@ public:
 		}
 	}
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 };
 
-const char* Baguette::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Baguette", // FRENCH
-	"Baguette", // ENGLISH
-	"Baguette", // GERMAN
-	"Barra de Pan", // SPANISH
-	"Filoncino", // ITALIAN
+dstr_t Baguette::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Baguette", 1}, // FRENCH
+	{"Baguette", 1}, // ENGLISH
+	{"Baguette", 1}, // GERMAN
+	{"Barra de Pan", 1}, // SPANISH
+	{"Filoncino", 1}, // ITALIAN
 };
 
-const char* Baguette::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Une baguette.\n - Les prises en passant son super efficace.\n", // FRENCH
-	" - A baguette.\n - En passant are super effective.\n", // ENGLISH
-	" - Ein Baguette.\n", // GERMAN
-	" - Una barra de pan.\n", // SPANISH
-	" - Una baguette.\n", // ITALIAN
+dstr_t Baguette::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Une baguette.\n - Les prises en passant son super efficace.\n", 1}, // FRENCH
+	{" - A baguette.\n - En passant are super effective.\n", 1}, // ENGLISH
+	{" - Ein Baguette.\n", 1}, // GERMAN
+	{" - Una barra de pan.\n", 1}, // SPANISH
+	{" - Una baguette.\n", 1}, // ITALIAN
 };
 
 
@@ -1677,11 +1679,11 @@ public:
 			holder->set_pokeicon(PokemonIcon(25 + holder->color, 1 + t1));
 	}
 
-	defdraw(2, t1);
+	defdraw(3, t1);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 
 	static int usefulness_tier(Piece* piece) {
@@ -1717,43 +1719,45 @@ public:
 	}
 };
 
-const char* KingPromotionItem<steel, dark>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Emblème du Général", // FRENCH
-	"Leader's Crest", // ENGLISH
-	"Anführersymbol", // GERMAN
-	"Distintivo de Líder", // SPANISH
-	"Simbolo del capo", // ITALIAN
+dstr_t KingPromotionItem<steel, dark>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Emblème du Général", 1}, // FRENCH
+	{"Leader's Crest", 1}, // ENGLISH
+	{"Anführersymbol", 1},// GERMAN
+	{"Distintivo de Líder", 1}, // SPANISH
+	{"Simbolo del capo", 1}, // ITALIAN
 };
 
-const char* KingPromotionItem<psychic, water>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Roche Royale", // FRENCH
-	"King's rock", // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t KingPromotionItem<psychic, water>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Roche Royale", 1}, // FRENCH
+	{"King's rock", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 template<typing t1, typing t2>
-const char* KingPromotionItem<t1, t2>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	to_c_str(std::string(" - Uniquement pour les pions de type ").append(type_str[0][t1]).append((t1 != t2) ? std::string("/").append(type_str[0][t2]) : "").append(".\n\
- - Permet la promotion en Roi.\n")), // FRENCH
-	to_c_str(std::string(" - Only for ").append(type_str[1][t1]).append((t1 != t2) ? std::string("/").append(type_str[1][t2]) : "").append(" type pawns.\n\
- - Allow promotion to King.\n")), // ENGLISH
-	"", // GERMAN
-	"", // SPANISH
-	"", // ITALIAN
+dstr_t KingPromotionItem<t1, t2>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{to_c_str(std::string(" - Uniquement pour les pions de type ").append(type_str[0][t1]).append((t1 != t2) ? std::string("/").append(type_str[0][t2]) : "").append(".\n\
+ - Permet la promotion en Roi.\n")), 1}, // FRENCH
+	{to_c_str(std::string(" - Only for ").append(type_str[1][t1]).append((t1 != t2) ? std::string("/").append(type_str[1][t2]) : "").append(" type pawns.\n\
+ - Allow promotion to King.\n")), 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
 };
 
 
 class IronBall : public PokeItem {
 public:
+	static bool const RNG = false;
+
 	IronBall(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::basic, -1, IC) {};
 
-	defdraw(4, 2);
+	defdraw(5, 2);
 
-	static const char* name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
-	static const char* description[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static int usefulness_tier(Piece* piece) {
 		return -1;
@@ -1785,20 +1789,65 @@ public:
 };
 
 
-const char* IronBall::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	"Balle Fer", // FRENCH
-	"Iron Ball", // ENGLISH
-	"Eisenkugel", // GERMAN
-	"Bola Férrea", // SPANISH
-	"Ferropalla", // ITALIAN
+dstr_t IronBall::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Balle Fer", 1}, // FRENCH
+	{"Iron Ball", 1}, // ENGLISH
+	{"Eisenkugel", 1}, // GERMAN
+	{"Bola Férrea", 1}, // SPANISH
+	{"Ferropalla", 1}, // ITALIAN
 };
 
-const char* IronBall::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
-	" - Retire une potentielle immunité sol.\n - Les rois ne peuvent plus roquer.\n - Les pions ne peuvent plus faire de double pas.\n", // FRENCH
-	" - Remove any ground immunity.\n - Kings/Pawns can no longer castle/double step.\n", // ENGLISH
-	" - Entfernt jegliche Bodenimmunität.\n", // GERMAN
-	" - Una barra de pan.\n", // SPANISH
-	" - Una baguette.\n", // ITALIAN
+dstr_t IronBall::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Retire une potentielle immunité sol.\n - Les rois ne peuvent plus roquer.\n - Les pions ne peuvent plus faire de double pas.\n", 1}, // FRENCH
+	{" - Remove any ground immunity.\n - Kings/Pawns can no longer castle/double step.\n", 1}, // ENGLISH
+	{" - Entfernt jegliche Bodenimmunität.\n", 1}, // GERMAN
+	{" - Una barra de pan.\n", 1}, // SPANISH
+	{" - Una baguette.\n", 1}, // ITALIAN
+};
+
+
+int number_of_drawed_terashard = 0;
+template<typing t>
+class TeraShard : public PokeItem {
+public:
+	static bool const RNG = false;
+
+	TeraShard(Piece* piece, ItemClass& IC) : PokeItem(piece, IC) {
+		number_of_drawed_terashard++;
+	}
+
+	defdraw(2, t);
+
+	static int usefulness_tier(Piece* piece) {
+		return 2 * (piece->type != t) - number_of_drawed_terashard;
+	}
+
+	virtual void select_holder() {
+		if ((holder->color == white and game.board.white_tera) or (holder->color == black and game.board.black_tera))
+			game.buttons->add(new TeraButton(9, 10.5, holder, t));
+	}
+
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
+
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
+};
+
+template<typing t>
+dstr_t TeraShard<t>::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{to_c_str(std::string("Téra-Eclat ").append(type_str_cap[0][t])), 0.75}, // FRENCH
+	{to_c_str(std::string(type_str_cap[1][t]).append(" Tera Shard")), 0.75}, // ENGLISH
+	{to_c_str(std::string("Tera-Stück (").append(type_str_cap[2][t]).append(")")), 0.75}, // GERMAN
+	{to_c_str(std::string("Teralito ").append(type_str_cap[3][t])), 0.75}, // SPANISH
+	{to_c_str(std::string("Teralite ").append(type_str_cap[4][t])), 0.75}, // ITALIAN
+};
+
+template<typing t>
+dstr_t TeraShard<t>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{to_c_str(std::string(" - Permet son utilisateur de teracristal en type ").append(type_str[0][t]).append(".")), 1}, // FRENCH
+	{to_c_str(std::string(" - Allow its user to terastalize into a ").append(type_str[1][t]).append(" type.")), 1}, // ENGLISH
+	{to_c_str(std::string("Tera-Stück (").append(type_str[2][t]).append(")")), 1}, // GERMAN
+	{to_c_str(std::string("Teralito ").append(type_str[3][t])), 1}, // SPANISH
+	{to_c_str(std::string("Teralite ").append(type_str[4][t])), 1}, // ITALIAN
 };
 
 void* init_item_table() {
@@ -1828,24 +1877,28 @@ void* init_item_table() {
 
 	EndLine();
 
-	Itemize(ResistanceBerry<normal>);
-	Itemize(ResistanceBerry<fire>);
-	Itemize(ResistanceBerry<water>);
-	Itemize(ResistanceBerry<grass>);
-	Itemize(ResistanceBerry<electric>);
-	Itemize(ResistanceBerry<ice>);
-	Itemize(ResistanceBerry<fighting>);
-	Itemize(ResistanceBerry<poison>);
-	Itemize(ResistanceBerry<ground>);
-	Itemize(ResistanceBerry<flying>);
-	Itemize(ResistanceBerry<psychic>);
-	Itemize(ResistanceBerry<bug>);
-	Itemize(ResistanceBerry<rock>);
-	Itemize(ResistanceBerry<ghost>);
-	Itemize(ResistanceBerry<dragon>);
-	Itemize(ResistanceBerry<dark>);
-	Itemize(ResistanceBerry<steel>);
-	Itemize(ResistanceBerry<fairy>);
+#define ItemizeAllTypes(Class) \
+Itemize(Class<normal>); \
+Itemize(Class<fire>); \
+Itemize(Class<water>); \
+Itemize(Class<grass>); \
+Itemize(Class<electric>); \
+Itemize(Class<ice>); \
+Itemize(Class<fighting>); \
+Itemize(Class<poison>); \
+Itemize(Class<ground>); \
+Itemize(Class<flying>); \
+Itemize(Class<psychic>); \
+Itemize(Class<bug>); \
+Itemize(Class<rock>); \
+Itemize(Class<ghost>); \
+Itemize(Class<dragon>); \
+Itemize(Class<dark>); \
+Itemize(Class<steel>); \
+Itemize(Class<fairy>);
+	
+	ItemizeAllTypes(ResistanceBerry);
+
 	Itemize(HeavyDutyBoots);
 	Itemize(NormalGem);
 	
@@ -1868,7 +1921,7 @@ void* init_item_table() {
 	Itemize(WideLens);
 	Itemize(ScopeLens);
 	Itemize(LifeOrb);
-	item_table[counter++] = ItemClass([](Piece* piece, ItemClass& IC) -> PokeItem* { return new LightBall(piece, IC); }, LightBall::usefulness_tier, LightBall::draw, LightBall::name, LightBall::description, LightBall::RNG);;
+	Itemize(LightBall);
 	Itemize(LoadedDice);
 	Itemize(Metronome);
 	
@@ -1894,6 +1947,10 @@ void* init_item_table() {
 	Itemize(IronBall);
 
 	Itemize(Baguette);
+	EndLine();
+
+	ItemizeAllTypes(TeraShard);
+
 	End();
 
 	return NULL;
@@ -1910,7 +1967,7 @@ ItemClass::ItemClass() {
 	name = NULL;
 }
 
-ItemClass::ItemClass(PokeItem* (*ctor)(Piece*, ItemClass&), int (*w)(Piece*), void (*d)(Surface, SDL_Rect*, size, anchor), const char* _name[], const char** desc, bool RNG) {
+ItemClass::ItemClass(PokeItem* (*ctor)(Piece*, ItemClass&), int (*w)(Piece*), void (*d)(Surface, SDL_Rect*, size, anchor), dstr_t _name[], dstr_t* desc, bool RNG) {
 	constructor = ctor;
 	usefulness_tier = w;
 	is_avaible = true;

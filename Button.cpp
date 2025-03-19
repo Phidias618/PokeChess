@@ -365,7 +365,7 @@ bool ItemSelectionButton::is_on_button(int mouse_button, double x, double y) {
 }
 
 void ItemSelectionButton::draw() {
-	SDL_Rect rect(x * TILE_SIZE, y * TILE_SIZE, ITEM_SIZE, ITEM_SIZE);
+	SDL_Rect rect((int)(x * TILE_SIZE), (int)(y * TILE_SIZE), ITEM_SIZE, ITEM_SIZE);
 	Item.draw(game.drawing_board, &rect);
 }
 
@@ -510,7 +510,7 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 			list[current++] = &Item;
 			Item.is_avaible = true;
 		}
-
+		number_of_drawed_terashard = 0;
 		while (j > 0) {
 			Piece* piece = game.board[x][y].piece;
 			std::shuffle(list, list + NB_OF_ITEMS, gen);
@@ -601,7 +601,7 @@ bool TextBoxDisplay::is_active() {
 }
 
 void TextBoxDisplay::activate() {
-	move_data& const last_move_data = game.board.get_last_nonduck_move();
+	move_data const last_move_data = game.board.get_last_nonduck_move();
 	if (last_move_data.begin_square == NULL or last_move_data.begin_square->y > 3) {
 		y = 10;
 		side = white;
@@ -782,7 +782,10 @@ void StatBoostDisplay::draw() {
 				
 				SDL_GetRGB(surface_px, surface_format, SDL_GetSurfacePalette(surface), &surface_R, &surface_G, &surface_B);
 
-				row[x] = SDL_MapRGB(surface_format, SDL_GetSurfacePalette(surface), arrow_R * 0.5 + surface_R * 0.5, arrow_G * 0.5 + surface_G * 0.5, arrow_B * 0.5 + surface_B * 0.5);
+				row[x] = SDL_MapRGB(surface_format, SDL_GetSurfacePalette(surface),
+					(Uint8)(arrow_R * 0.5 + surface_R * 0.5), 
+					(Uint8)(arrow_G * 0.5 + surface_G * 0.5), 
+					(Uint8)(arrow_B * 0.5 + surface_B * 0.5));
 			}
 		}
 
@@ -991,7 +994,7 @@ double clamp(double x, double min, double max) {
 
 void VolumeSlider::hold(int mouse_button, double x_, double) {
 	PRINT_VAR(x_);
-	game.music_volume = 128 * (clamp(x_-2.25, 0.0, 2.5) / 2.5);
+	game.music_volume = (short)(128 * (clamp(x_-2.25, 0.0, 2.5) / 2.5));
 	if (game.with_sounds) {
 		Mix_VolumeMusic(game.music_volume);
 		Mix_Volume(-1, game.music_volume);
@@ -1182,8 +1185,9 @@ InformationDisplay::InformationDisplay(double x_, double y_) : Button(x_ - 1.25,
 	displayed_type = typeless;
 	displayed_item = NULL;
 	displayed_piece = NULL;
-	screen = Surface::createRGB(TILE_SIZE * w, TILE_SIZE * h);
-	edge = 0.1 * TILE_SIZE;
+	displayed_page = 0;
+	screen = Surface::createRGB((int)(TILE_SIZE * w), (int)(TILE_SIZE * h));
+	edge = (int)(0.1 * TILE_SIZE);
 	language = LANGUAGE::FRENCH;
 }
 
@@ -1214,8 +1218,8 @@ void InformationDisplay::draw() {
 }
 
 void InformationDisplay::resize() {
-	edge = 0.1 * TILE_SIZE;
-	screen = Surface::createRGB(TILE_SIZE * w, TILE_SIZE * h);
+	edge = (int)(0.1 * TILE_SIZE);
+	screen = Surface::createRGB((int)(TILE_SIZE * w), (int)(TILE_SIZE * h));
 	re_draw();
 }
 
@@ -1225,10 +1229,11 @@ void InformationDisplay::re_draw() {
 	PRINT_VAR((int)(game.language));
 	// game.draw(phone_frame, x, y, center);
 	if (displayed_item != NULL) {
-		int X = w * TILE_SIZE / 2;
-		int Y = 0.35 * TILE_SIZE;
+		int X = (int)(w * TILE_SIZE / 2);
+		int Y = (int)(0.35 * TILE_SIZE);
 		SDL_Rect rect(X, Y);
-		Surface title = CSM_font_array[TILE_SIZE / 3].render_shaded_wrapped(displayed_item->name[(int)language], Color::black, Color::sky, 2.4 * TILE_SIZE);
+		dstr_t name = displayed_item->name[(int)language];
+		Surface title = CSM_font_array[(int)(TILE_SIZE * name.second / 3)].render_shaded_wrapped(name.first, Color::black, Color::sky, (int)(2.4 * TILE_SIZE));
 		screen.blit(title, &rect, NULL, top_middle);
 		Y += title->h;
 		rect.y = Y;
@@ -1241,7 +1246,9 @@ void InformationDisplay::re_draw() {
 		rect.y = Y;
 		rect.x = X;
 
-		screen.blit(CSM_font_array[TILE_SIZE / 5].render_blended_wrapped(displayed_item->description[(int)language], Color::black, TILE_SIZE * 2.3), &rect, NULL, top_left);
+		dstr_t desc = displayed_item->description[(int)language];
+
+		screen.blit(CSM_font_array[(int)(TILE_SIZE * desc.second / 5)].render_blended_wrapped(desc.first, Color::black, (int)(TILE_SIZE * 2.3)), &rect, NULL, top_left);
 	}
 	else if (displayed_type != typeless) {
 
@@ -1273,8 +1280,8 @@ void InformationDisplay::re_draw() {
 
 		double const mini_size = 0.3;
 		SDL_Rect rect;
-		int Y = 0.4 * TILE_SIZE;
-		int X = w * TILE_SIZE / 2;
+		int Y = (int)(0.4 * TILE_SIZE);
+		int X = (int)(w * TILE_SIZE / 2);
 		rect.x = X;
 		rect.y = Y;
 
@@ -1547,8 +1554,8 @@ void InformationDisplay::re_draw() {
 	else if (displayed_piece != NULL) {
 		if (displayed_page == 0) {
 			SDL_Rect rect;
-			int Y = 0.4 * TILE_SIZE;
-			int X = w * TILE_SIZE / 2;
+			int Y = (int)(0.4 * TILE_SIZE);
+			int X = (int)(w * TILE_SIZE / 2);
 			rect.x = X;
 			rect.y = Y;
 
@@ -1693,4 +1700,42 @@ void ChangeGameruleButton::draw() {
 
 void ChangeGameruleButton::effect(int, double, double) {
 	(*gamerule_ptr) = not (*gamerule_ptr);
+}
+
+TeraButton::TeraButton(double x, double y, Piece* p, typing t) : Button(x-0.5, y-0.5, 1, 1) {
+	piece = p;
+	new_type = t;
+}
+
+void TeraButton::draw() {
+	if (game.selected_piece != piece) {
+		kill();
+		delete this;
+	}
+	else {
+		game.draw(CSM_font_array[TILE_SIZE/2].render_solid("Tera", Color::black), x + (w/2), y + (h/2), center);
+	}
+}
+
+void TeraButton::effect(int, double, double) {
+	if (game.selected_piece->color == white) {
+		game.board.white_tera = false;
+	}
+	else {
+		game.board.black_tera = false;
+	}
+	game.selected_piece->tera(new_type);
+	game.selected_piece->set_item(NULL);
+	
+
+	move_data data;
+	
+	data.tera = true;
+	data.attacker = game.selected_piece;
+	data.begin_square = data.target_square = game.selected_piece->square;
+	game.change_turn();
+
+	game.board.move_historic.push_front(data);
+
+	game.unselect_piece();
 }

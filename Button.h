@@ -68,7 +68,7 @@ public:
 
 class ButtonCollection {
 private:
-	bool is_cleared;
+	bool is_cleared = false;
 
 	class Node {
 	public:
@@ -237,7 +237,7 @@ class TextBoxDisplay : public Button {
 	piece_color side : 2;
 
 	bool is_first;
-	TextBoxDisplay* next;
+	TextBoxDisplay* next = NULL;
 
 	static inline const int constexpr BUFFER_SIZE = 1024;
 	char message[BUFFER_SIZE];
@@ -423,6 +423,19 @@ class ChangeGameruleButton : public Button {
 	short animation_counter = 0;
 public:
 	ChangeGameruleButton(double x, double y, bool* gamerule_ptr, Surface* sprite, bool on_foreground, short animation_length, short period, char const* msg0...);
+
+	virtual void draw();
+
+	virtual void effect(int, double, double);
+};
+
+
+class TeraButton : public Button {
+	typing new_type;
+	Piece* piece;
+
+public:
+	TeraButton(double x, double y, Piece* piece, typing type);
 
 	virtual void draw();
 

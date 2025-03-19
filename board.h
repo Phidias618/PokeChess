@@ -109,6 +109,9 @@ public:
 	double crit_rate;
 	double miss_rate;
 
+	bool white_tera : 1 = true;
+	bool black_tera : 1 = true;
+
 	bool in_bonus_move = false;
 
 	int turn_number;
@@ -133,7 +136,7 @@ public:
 
 	void reset();
 
-	move_data& const get_last_nonduck_move();
+	move_data const get_last_nonduck_move();
 
 	File& operator[](int i);
 

@@ -35,7 +35,7 @@ class Duck;
 struct move_data {
 	move_data() {
 		matchup = neutral;
-		promotion = en_passant = castling = interrupt_move = was_in_check = escaped_check = move_again = suicide = cancel = do_crit = is_super_effective = is_not_very_effective = is_immune = do_miss = false;
+		tera = promotion = en_passant = castling = interrupt_move = was_in_check = escaped_check = move_again = suicide = cancel = do_crit = is_super_effective = is_not_very_effective = is_immune = do_miss = false;
 		attacker = NULL;
 		defender = NULL;
 		crit_rate = miss_rate = 0;
@@ -63,6 +63,8 @@ struct move_data {
 	bool en_passant : 1; // stores whether the move is en passant
 	bool castling : 1; // stores whether the move is castling
 	bool interrupt_move : 1; // stores whether the move (such as a promotion) needs to interrupt the normal process of a move
+	
+	
 
 	bool was_in_check : 1; // stores whether the attacker was in check before moving
 	bool escaped_check : 1; // stores whether the attacker managed to escape a check
@@ -80,6 +82,8 @@ struct move_data {
 	bool is_not_very_effective : 1;
 	bool is_immune : 1;
 	bool do_miss : 1; // stores wether the move did miss
+
+	bool tera : 1;
 
 	// note that most of the flags are used to display pokemon textbox after the move.
 };
@@ -157,6 +161,7 @@ public:
 	static PieceClass* const cls;
 	PieceClass* const Class;
 
+	typing base_type;
 	typing type;
 	const piece_color color;
 	
@@ -248,6 +253,8 @@ public:
 	}
 
 	void set_type(typing new_type);
+	
+	void tera(typing new_type);
 
 	void set_item(PokeItem* new_item);
 

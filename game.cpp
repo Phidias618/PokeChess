@@ -129,6 +129,11 @@ void Game::resize_drawing_board(int new_tile_size) {
 void Game::select_piece(Piece* piece) {
 	selected_piece = piece;
 
+	if (piece == NULL)
+		return;
+	if (piece->item != NULL)
+		piece->item->select_holder();
+
 	for (Square& square : board) {
 		if (piece->can_move_to(square)) {
 			square.is_accessible = true;

@@ -71,7 +71,7 @@ auto Square::to_graveyard() -> void {
 
 auto Square::draw() -> void {
 	
-	move_data& const last_move_data = board->get_last_nonduck_move();
+	move_data const last_move_data = board->get_last_nonduck_move();
 	Color color = board->light_square_color;
 	if ((x + y) % 2 == 0)
 		color = board->dark_square_color;
@@ -166,6 +166,7 @@ void Board::init() {
 	possible_move_color = Color::aqua;
 	last_move_color = Color::pale_yellow;
 
+	
 
 	miss_rate = 0.1;
 	crit_rate = 1.0 / 16.0;
@@ -179,15 +180,15 @@ void Board::init() {
 auto Board::clear() -> void {
 	turn_number = 0;
 	
-	duck = NULL;
 	move_historic.clear();
-	;
+
 	File* const end_row_ptr = grid + 8;
 	for (File* row_ptr = grid; row_ptr < end_row_ptr; row_ptr++) {
 		row_ptr->clear();
 	}
 	if (duck != NULL)
 		delete duck;
+	duck = NULL;
 
 	while (white_death --> 0) {
 		delete white_graveyard[white_death];
@@ -213,6 +214,7 @@ void Board::reset() {
 	clear();
 
 	turn_number = 0;
+	white_tera = black_tera = true;
 
 	layout[0] = layout[7] = Rook::cls;
 	layout[1] = layout[6] = Knight::cls;
@@ -274,8 +276,8 @@ auto Board::operator[](int i) -> File& {
 		throw std::exception();
 }
 
-move_data& const Board::get_last_nonduck_move() {
-	for (move_data& const move : move_historic) {
+move_data const Board::get_last_nonduck_move() {
+	for (move_data const move : move_historic) {
 		if (move.attacker->color != no_color)
 			return move;
 	}

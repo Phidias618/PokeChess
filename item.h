@@ -4,6 +4,8 @@
 #include "poketyping.h"
 #include "assets.h"
 
+typedef std::pair<char const*, double> dstr_t;
+
 class Piece;
 class PokeItem;
 enum class item_id : short;
@@ -17,7 +19,7 @@ enum item_placeholder_type {
 
 struct ItemClass {
 private:
-	ItemClass(PokeItem* (*)(Piece*, ItemClass&), int (*usefulness_tier)(Piece*), void (*draw)(Surface, SDL_Rect*, size, anchor), const char* name_[], const char** description, bool RNG);
+	ItemClass(PokeItem* (*)(Piece*, ItemClass&), int (*usefulness_tier)(Piece*), void (*draw)(Surface, SDL_Rect*, size, anchor), dstr_t name_[], dstr_t* description, bool RNG);
 
 	PokeItem* (*constructor)(Piece*, ItemClass&);
 	void (*_draw)(Surface, SDL_Rect*, size, anchor);
@@ -29,8 +31,8 @@ public:
 	item_placeholder_type type;
 	bool is_avaible;
 	bool is_RNG_dependant;
-	const char** description;
-	const char** name;
+	dstr_t* description;
+	dstr_t* name;
 
 	int (*usefulness_tier)(Piece*);
 	inline void draw(Surface surface, SDL_Rect* rect = NULL, size s=regular, anchor a = top_left) {
@@ -91,6 +93,9 @@ public:
 
 	virtual void update_pokeicon() {}
 
+	// called whenever the piece gets selected
+	virtual void select_holder() {}
+
 	void consume();
 	
 	static void draw(Surface dest, SDL_Rect* rect = NULL, anchor a = top_left) { ; }
@@ -138,6 +143,8 @@ public:
 	virtual void add_cosmetic(move_data& data) { ; }
 };
 
+extern int number_of_drawed_terashard;
+
 #define HOLDS_SAFETY_GOOGLES(piece) (piece != NULL and piece->item != NULL and piece->item->id == item_id::safety_googles)
 #define HOLDS_PROTECTIVE_PADS(piece) (piece != NULL and piece->item != NULL and piece->item->id == item_id::protective_pads)
 #define HOLDS_HONEY(piece) (piece != NULL and piece->item != NULL and piece->item->id == item_id::honey)
@@ -148,7 +155,7 @@ public:
 
 
 
-#define NB_OF_ITEMS 64
+#define NB_OF_ITEMS 100
 extern ItemClass item_table[NB_OF_ITEMS];
 
 extern void* _table_initialize;

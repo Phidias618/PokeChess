@@ -133,7 +133,9 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 }
 
 PieceClass::PieceClass() : constructor(NULL), id(-2) {
-	;
+	for (int i = 1; i < (int)LANGUAGE::NB_OF_LANGUAGE; i++) {
+		name[i] = "";
+	}
 }
 
 PieceClass::PieceClass(int _id, char const* names...) : constructor(NULL), id(_id) {
@@ -187,11 +189,10 @@ Piece* PieceClass::operator()(Board& board, piece_color color, Square* sq, typin
 
 PokemonIcon::PokemonIcon(Piece const* const piece) {
 	x = 1 + 2 * (piece->Class->id + piece->evolved * 5) + piece->color;
-	y = (short)piece->type + 1;
+	y = (short)piece->base_type + 1;
 	if (y == 0) {
 		x = y = -1;
 	}
-	PRINT_DEBUG(x << ' ' << y);
 }
 
 
@@ -202,7 +203,7 @@ Piece::Piece(Board& board_, PieceClass* const _Class, piece_color color_, Square
 	color(color_),
 	sprite(Surface::createRGBA(TILE_SIZE, TILE_SIZE)),
 	square(sq),
-	type(type_),
+	base_type(type_), type(type_),
 	item(item)
 {	
 	has_already_move = false;
@@ -242,10 +243,15 @@ void Piece::update_sprite() {
 }
 
 void Piece::set_type(typing new_type) {
-	type = new_type;
+	base_type = type = new_type;
 	set_pokeicon(PokemonIcon(this));
 	if (item != NULL)
 		item->update_pokeicon();
+}
+
+void Piece::tera(typing new_type) {
+	type = new_type;
+	update_sprite();
 }
 
 void Piece::set_item(PokeItem* new_item) {
@@ -562,7 +568,7 @@ bool Pawn::can_double_step(Square& target, bool base_rule) {
 }
 
 auto Pawn::can_en_passant(Square& target_square, bool base_rule) -> bool {
-	move_data& const last_move_data = board.get_last_nonduck_move();
+	move_data const last_move_data = board.get_last_nonduck_move();
 
 	if (last_move_data.attacker == NULL or
 		last_move_data.cancel or
@@ -624,7 +630,7 @@ auto Pawn::base_move_to(Square& target_square) -> move_data {
 	if (can_en_passant(target_square)) {
 		data.en_passant = true;
 
-		move_data& const last_move_data = board.get_last_nonduck_move();
+		move_data const last_move_data = board.get_last_nonduck_move();
 
 		data.set_type_matchup_data(this, last_move_data.attacker, &target_square);
 		if (not data.cancel) {
