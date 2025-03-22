@@ -239,7 +239,7 @@ class TextBoxDisplay : public Button {
 	bool is_first;
 	TextBoxDisplay* next = NULL;
 
-	static inline const int constexpr BUFFER_SIZE = 1024;
+	static inline const int constexpr BUFFER_SIZE = 512;
 	char message[BUFFER_SIZE];
 
 	static const short begin_x = 18;

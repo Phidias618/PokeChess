@@ -10,7 +10,7 @@ class Piece;
 class PokeItem;
 enum class item_id : short;
 
-enum item_placeholder_type {
+enum item_placeholder_type : Uint8 {
 	normal_item,
 	newline_item,
 	space_item,
@@ -19,18 +19,23 @@ enum item_placeholder_type {
 
 struct ItemClass {
 private:
-	ItemClass(PokeItem* (*)(Piece*, ItemClass&), int (*usefulness_tier)(Piece*), void (*draw)(Surface, SDL_Rect*, size, anchor), dstr_t name_[], dstr_t* description, bool RNG);
+	ItemClass(PokeItem* (*)(Piece*, ItemClass&), Uint32 class_hash, int (*usefulness_tier)(Piece*), void (*draw)(Surface, SDL_Rect*, size, anchor), dstr_t name_[], dstr_t* description, bool RNG);
 
 	PokeItem* (*constructor)(Piece*, ItemClass&);
 	void (*_draw)(Surface, SDL_Rect*, size, anchor);
 
 	friend void* init_item_table(void);
+
 public:
 	ItemClass();
 
 	item_placeholder_type type;
+
 	bool is_avaible;
 	bool is_RNG_dependant;
+
+	Uint32 class_hash;
+
 	dstr_t* description;
 	dstr_t* name;
 
@@ -47,28 +52,15 @@ public:
 
 enum class item_id : short {
 	no_item = 0,
-	basic,
 	evolution_stone,
 	resistance_berry,
 	imunity,
-
-	// - +1/16 crit chance for each consecutive move with this piece
 	metronome,
-	// - if a bug type can attack you, they cannot move elsewhere
 	honey, 
-
-	// - each rng roll is done with dnd advantage
 	loaded_dice, 
-
-	// - ignore items while attacking
 	protective_pads,
-	// - ignore items while attacked
 	safety_googles,
-	// - the user cant promote
 	everstone,
-	// - removes potential ground immunity
-	// - the user cannot castle
-	// - the user cannot perform a pawn double step
 	iron_ball,
 };
 
@@ -101,6 +93,9 @@ public:
 	static void draw(Surface dest, SDL_Rect* rect = NULL, anchor a = top_left) { ; }
 
 	static Surface get_sprite() { return NULL; }
+
+	virtual Uint32 get_hash() { return 0; }
+	virtual void init_with_hash(Uint32 hash) { ; }
 
 	// occurs when given items at random
 	// negative : the item is detrimental
@@ -159,3 +154,23 @@ extern int number_of_drawed_terashard;
 extern ItemClass item_table[NB_OF_ITEMS];
 
 extern void* _table_initialize;
+
+inline Uint64 get_item_hash(PokeItem* item) {
+	if (item == NULL)
+		return 0;
+	return ((Uint64)(item->cls.class_hash) << 32) | item->get_hash();
+}
+
+inline PokeItem* create_item_from_hash(Piece* holder, Uint64 const hash) {
+	if (hash == 0)
+		return NULL;
+	Uint32 const ch = hash >> 32;
+	for (int i = 0; i < NB_OF_ITEMS; i++) {
+		ItemClass& IC = item_table[i];
+		if (IC.type == normal_item and IC.class_hash == ch) {
+			PokeItem* item = IC(holder);
+			item->init_with_hash((Uint32)hash);
+			return item;
+		}
+	}
+}

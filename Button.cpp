@@ -581,8 +581,7 @@ void SwitchSelectionButton::effect(int, double, double) {
 }
 
 TextBoxDisplay::TextBoxDisplay(const char* text, bool _is_first) : Button(5.0, 0.0, 8.0, textbox_frame->h * 8.0 / textbox_frame->w) {
-	sprite = Surface::createRGB(textbox_frame->w, textbox_frame->h);
-	sprite.blit(textbox_frame, NULL, NULL);
+	sprite = textbox_frame.copy();
 	visual_index = text_index = 0;
 	timer = 0;
 	shift_timer = 0;
@@ -639,7 +638,7 @@ void TextBoxDisplay::draw() {
 	else {
 		char displayed_char = (text_index >= BUFFER_SIZE) ? '\0' : message[text_index];
 		if (displayed_char != '\0') {
-			if (displayed_char == '\n') {
+			if (displayed_char == '\n' or visual_index == char_per_line) {
 				visual_index = 0;
 				if (not is_on_second_line)
 					is_on_second_line = true;
@@ -653,9 +652,9 @@ void TextBoxDisplay::draw() {
 				r.x = begin_x + char_width * visual_index - (displayed_char == '\'') * 2;
 				r.y = begin_y + y_pixel_increment * is_on_second_line;
 
-				Surface char_surface = poke_charset.chop({ (displayed_char % 16) * 16, (displayed_char / 16) * 16, 16, 16 });
+				Surface char_surface = poke_charset.chop({ (displayed_char % 16) * char_width, (displayed_char / 16) * char_width, char_width, char_width });
 				char_surface.set_colorkey(char_surface.map_rgba(255, 255, 255, 255), true);
-
+				PRINT_DEBUG(displayed_char);
 				sprite.blit(char_surface, &r, NULL);
 
 				if (displayed_char != '\'')
@@ -682,7 +681,11 @@ void TextBoxDisplay::draw() {
 		}
 	}
 
-	game.draw(sprite, x, y, (side == white) ? bottom_left : top_left);
+	SDL_Rect dest = {5 * TILE_SIZE, 2 * TILE_SIZE, 8*TILE_SIZE, sprite->h * (double)8 * TILE_SIZE / sprite->w};
+	if (side == white) {
+		dest.y += 8 * TILE_SIZE - dest.h;
+	}
+	SDL_BlitSurfaceScaled(sprite, NULL, game.drawing_board, &dest, SDL_SCALEMODE_LINEAR);
 }
 
 TextBoxDisplay::~TextBoxDisplay() {

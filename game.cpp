@@ -57,7 +57,7 @@ void Game::init() {
 	std::random_device rand;
 	RNG.seed(rand());
 
-	window = Display("test", 18 * TILE_SIZE / 2, 12 * TILE_SIZE / 2, SDL_WINDOW_RESIZABLE|SDL_WINDOW_FULLSCREEN);
+	window = Display("test", 18 * TILE_SIZE / 2, 12 * TILE_SIZE / 2, SDL_WINDOW_RESIZABLE|(SDL_WINDOW_FULLSCREEN&0));
 	screen = window.get_surface();
 
 	is_holding_something = false;

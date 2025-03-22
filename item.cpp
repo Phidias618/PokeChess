@@ -4,7 +4,7 @@
 #include "game.h"
 #include "board.h"
 
-
+int current_id = 0;
 
 move_data PokeItem::move_to(Square& target) {
 	return holder->base_move_to(target);
@@ -16,7 +16,7 @@ PokeItem::PokeItem(Piece* piece, item_id id_, int prio, ItemClass& IC) : id(id_)
 	holder = piece;
 }
 
-PokeItem::PokeItem(Piece* piece, ItemClass& IC) : id(item_id::basic), priority(0), cls(IC) {
+PokeItem::PokeItem(Piece* piece, ItemClass& IC) : id(item_id::no_item), priority(0), cls(IC) {
 	used = false;
 }
 
@@ -457,7 +457,7 @@ dstr_t ResistanceBerry<normal>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 class RingTarget : public PokeItem {
 public:
 	static const bool RNG = false;
-	RingTarget(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::basic, 0x7FFFFFFF, IC) {
+	RingTarget(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::no_item, 0x7FFFFFFF, IC) {
 	}
 
 	defdraw(5, 0);
@@ -597,7 +597,7 @@ dstr_t ImmunityItem<type>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 
 class ExpertBelt : public PokeItem {
 public:
-	ExpertBelt(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::basic, -2, IC) {
+	ExpertBelt(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::no_item, -2, IC) {
 		;
 	}
 
@@ -646,7 +646,7 @@ dstr_t ExpertBelt::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 
 class BlunderPolicy : public PokeItem {
 public:
-	BlunderPolicy(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::basic, 0, IC) {
+	BlunderPolicy(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::no_item, 0, IC) {
 		;
 	}
 
@@ -751,6 +751,7 @@ public:
 
 	virtual void add_cosmetic(move_data& data) {
 		if (activated) {
+			activated = false;
 			char buffer[256] = "\0";
 			strcat_s(buffer, holder->Class->name[(int)game.language]);
 			strcat_s(buffer, "\nDied to life orb");
@@ -781,7 +782,7 @@ dstr_t LifeOrb::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 
 class LoadedDice : public PokeItem {
 public:
-	LoadedDice(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::basic, -1, IC) {
+	LoadedDice(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::no_item, -1, IC) {
 		;
 	}
 
@@ -910,6 +911,10 @@ public:
 			}
 		}
 		data.crit_rate *= nb_of_consecutives;
+	}
+
+	virtual Uint32 get_hash() {
+		return nb_of_consecutives;
 	}
 
 	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
@@ -1127,6 +1132,7 @@ public:
 	
 	virtual void add_cosmetic(move_data& data) {
 		if (used) {
+			used = false;
 			char buffer[256] = "\0";
 			strcat_s(buffer, holder->Class->name[(int)game.language]);
 			strcat_s(buffer, "\nfled successfuly");
@@ -1462,6 +1468,7 @@ public:
 
 	virtual void add_cosmetic(move_data& data) {
 		if (activated) {
+			activated = false;
 			char buffer[256] = "\0";
 			strcat_s(buffer, holder->Class->name[(int)game.language]);
 			strcat_s(buffer, "\nDied to\nBlackSludge");
@@ -1751,7 +1758,7 @@ class IronBall : public PokeItem {
 public:
 	static bool const RNG = false;
 
-	IronBall(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::basic, -1, IC) {};
+	IronBall(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::no_item, -1, IC) {};
 
 	defdraw(5, 2);
 
@@ -1850,10 +1857,39 @@ dstr_t TeraShard<t>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 	{to_c_str(std::string("Teralite ").append(type_str[4][t])), 1}, // ITALIAN
 };
 
+Uint32 get_name_hash(char const* name) {
+	Uint32 res = 0;
+	Uint32 p = 1;
+	while (name[0] != '\0') {
+		res += name[0] * p;
+		p *= 1237;
+		name++;
+	}
+	return res;
+}
+
+ItemClass item_table[NB_OF_ITEMS];
+
+#include <exception>
+#include <iostream>
 void* init_item_table() {
 	int counter = 0;
 
-#define Itemize(class) item_table[counter++] = ItemClass([](Piece* piece, ItemClass& IC) -> PokeItem* { return new class(piece, IC); }, class::usefulness_tier, class::draw, class::name, class::description, class::RNG);
+#define Itemize(Class) \
+{ \
+	Uint32 ch = get_name_hash(#Class); \
+	std::cout << "hash(" << #Class << ") = " << ch << '\n'; \
+	if (ch == 0) \
+		std::cout << "Invalid name for Item " << #Class << " try to add some trailing _ after it's name\n"; \
+	for (int i = 0; i < NB_OF_ITEMS; i++) { \
+		ItemClass& IC = item_table[i]; \
+		if (IC.type == normal_item and IC.class_hash == ch) { \
+			std::cout << "Invalid name for Item " << #Class << " try to add some trailing _ after it's name\n"; \
+			throw std::exception(""); \
+		} \
+	} \
+	item_table[counter++] = ItemClass([](Piece* piece, ItemClass& IC) -> PokeItem* { return new Class(piece, IC); }, ch, Class::usefulness_tier, Class::draw, Class::name, Class::description, Class::RNG); \
+}
 #define AddPlaceHolder(n) counter += n
 #define EndLine() item_table[counter++].type = newline_item
 #define End() item_table[counter].type = terminator_item
@@ -1967,7 +2003,7 @@ ItemClass::ItemClass() {
 	name = NULL;
 }
 
-ItemClass::ItemClass(PokeItem* (*ctor)(Piece*, ItemClass&), int (*w)(Piece*), void (*d)(Surface, SDL_Rect*, size, anchor), dstr_t _name[], dstr_t* desc, bool RNG) {
+ItemClass::ItemClass(PokeItem* (*ctor)(Piece*, ItemClass&), Uint32 ch, int (*w)(Piece*), void (*d)(Surface, SDL_Rect*, size, anchor), dstr_t _name[], dstr_t* desc, bool RNG) {
 	constructor = ctor;
 	usefulness_tier = w;
 	is_avaible = true;
@@ -1976,6 +2012,7 @@ ItemClass::ItemClass(PokeItem* (*ctor)(Piece*, ItemClass&), int (*w)(Piece*), vo
 	_draw = d;
 	is_RNG_dependant = RNG;
 	name = _name;
+	class_hash = ch;
 }
 
 PokeItem* ItemClass::operator()(Piece* piece) {
@@ -1983,6 +2020,6 @@ PokeItem* ItemClass::operator()(Piece* piece) {
 	return item;
 }
 
-ItemClass item_table[NB_OF_ITEMS];
+
 
 void* _table_initializer = init_item_table();

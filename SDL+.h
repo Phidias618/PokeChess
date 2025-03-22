@@ -143,8 +143,8 @@ public:
 	inline Surface copy() {
 		Surface new_surface = SDL_CreateSurface(surface->w, surface->h, surface->format);
 		SDL_SetSurfacePalette(new_surface, SDL_GetSurfacePalette(surface));
-		blit(new_surface, NULL, NULL);
-		return NULL;
+		new_surface.blit(self, NULL, NULL);
+		return new_surface;
 	}
 
 	Surface(const Surface& other, SDL_Rect* area) {

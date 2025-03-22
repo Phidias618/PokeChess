@@ -83,12 +83,19 @@ void* load_all_sounds() {
 	return NULL;
 }
 
+static int true_mod(int x, int y) {
+	return (x % y + y) % y;
+}
+
+
+
 void* load_all_sprites(int __tile_size) {
 	TILE_SIZE = __tile_size;
 	ITEM_SIZE = __tile_size / 2;
 	ITEM_MEGA_SIZE = 4 * TILE_SIZE / 4;
 	ITEM_MINI_SIZE = 3 * TILE_SIZE / 8;
 	textbox_frame = load_img("assets\\Sprites\\textbox_frame.png");
+
 
 	poke_charset = load_img("assets\\Sprites\\charset.png");
 
