@@ -1,3 +1,7 @@
+#include <cstdio>
+#include <assert.h>
+
+#include "poketyping.h"
 #include "SDL+.h"
 #include "assets.h"
 
@@ -147,5 +151,47 @@ void* load_all_sprites(int __tile_size) {
 	return NULL;
 }
 
-void* __ = load_all_sprites(TILE_SIZE);
+Uint64 ability_array[18][40];
 
+typedef union {
+	Uint64 t;
+	Uint8 arr[8];
+} __Uint64_as_bytearray;
+
+Uint64 reverse_endianess(Uint64 val) {
+	__Uint64_as_bytearray x;
+	x.t = val;
+	
+	for (int i = 0; i < 4; i++) {
+		Uint8 tmp = x.arr[i];
+		x.arr[i] = x.arr[7 - i];
+		x.arr[7 - i] = tmp;
+	}
+	return x.t;
+}
+
+constexpr bool is_little_endian() {
+	Uint16 n = 1;
+	return *(Uint8*)&n == 1;
+}
+
+void* load_ability_array() {
+	FILE* f;
+	fopen_s(&f, "assets\\ability", "r");
+	if (f == NULL)
+		throw;
+	fread(ability_array, sizeof(Uint64), 18 * 40, f);
+
+	fclose(f);
+	if (is_little_endian()) {
+		iter_typing(t) {
+			for (int i = 0; i < 40; i++) {
+				ability_array[t][i] = reverse_endianess(ability_array[t][i]);
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void* __ = (void*)((int)load_all_sprites(TILE_SIZE) + (int)load_ability_array());

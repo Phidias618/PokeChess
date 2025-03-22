@@ -259,12 +259,12 @@ void Game::resume_move() {
 		}
 	}
 
-	if (data.attacker_item_slot != NULL and not IS_SAFETY_GOOGLES(data.defenser_item_slot)) {
-		data.attacker_item_slot->add_cosmetic(data);
+	if (data.attacker_item_slot != 0 and not HOLDS_SAFETY_GOOGLES(data.defender)) {
+		data.attacker->item->add_cosmetic(data);
 	}
 
-	if (data.defenser_item_slot != NULL and not IS_PROTECTIVE_PADS(data.attacker_item_slot)) {
-		data.defenser_item_slot->add_cosmetic(data);
+	if (data.defenser_item_slot != 0 and not IS_PROTECTIVE_PADS(data.attacker->item)) {
+		data.defender->item->add_cosmetic(data);
 	}
 
 	if (data.move_again) {

@@ -16,6 +16,8 @@ enum size {
 	mini,
 };
 
+extern Uint64 ability_array[18][40];
+
 extern Surface item_sheet_mega;
 extern Surface item_sheet;
 extern Surface item_sheet_mini;

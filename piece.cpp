@@ -41,9 +41,9 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 	miss_rate = attacker->board.miss_rate;
 	crit_rate = attacker->board.crit_rate;
 
-	attacker_item_slot = attacker->item;
+	attacker_item_slot = get_item_hash(attacker->item);
 	if (defender != NULL)
-		defenser_item_slot = defender->item;
+		defenser_item_slot = get_item_hash(defender->item);
 
 	if (not game.with_typing or defender == NULL)
 		return;
@@ -72,37 +72,45 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 	Board& board = attacker->board;
 
 
-	if (attacker->item != NULL and not IS_SAFETY_GOOGLES(defenser_item_slot)) {
-		if (defender->item != NULL and not IS_PROTECTIVE_PADS(attacker_item_slot)) {
+	if (attacker->item != NULL and not IS_SAFETY_GOOGLES(defender->item)) {
+		if (defender->item != NULL and not IS_PROTECTIVE_PADS(attacker->item)) {
 			if (attacker->item->priority >= defender->item->priority) {
-				attacker_item_slot->attack_modifier(self);
-				defenser_item_slot->defense_modifier(self);
+				attacker->item->attack_modifier(self);
+				defender->item->defense_modifier(self);
 
-				attacker_item_slot->crit_modifier(self);
+				if (attacker->item != NULL)
+				attacker->item->crit_modifier(self);
 				
-				attacker_item_slot->accuracy_modifier(self);
-				defenser_item_slot->evasion_modifier(self);
+				attacker->item->accuracy_modifier(self);
+				if (defender->item != NULL)
+					defender->item->evasion_modifier(self);
 			}
 			else {
-				defenser_item_slot->defense_modifier(self);
-				defenser_item_slot->attack_modifier(self);
+				defender->item->defense_modifier(self);
+				attacker->item->attack_modifier(self);
 				
-				attacker_item_slot->crit_modifier(self);
+				if (attacker->item != NULL)
+					attacker->item->crit_modifier(self);
 
-				defenser_item_slot->evasion_modifier(self);
-				attacker_item_slot->accuracy_modifier(self);
+				if (defender->item != NULL)
+					defender->item->evasion_modifier(self);
+				if (attacker->item != NULL)
+					attacker->item->accuracy_modifier(self);
 			}
 		}
 		else {
-			attacker_item_slot->attack_modifier(self);
-			attacker_item_slot->crit_modifier(self);
-			attacker_item_slot->accuracy_modifier(self);
+			attacker->item->attack_modifier(self);
+			if (attacker->item != NULL)
+				attacker->item->crit_modifier(self);
+			if (attacker->item != NULL)
+				attacker->item->accuracy_modifier(self);
 		}
 	}
 	else {
-		if (defender->item != NULL and not IS_PROTECTIVE_PADS(attacker_item_slot)) {
-			defenser_item_slot->defense_modifier(self);
-			defenser_item_slot->evasion_modifier(self);
+		if (defender->item != NULL and not IS_PROTECTIVE_PADS(attacker->item)) {
+			defender->item->defense_modifier(self);
+			if (defender->item != NULL)
+				defender->item->evasion_modifier(self);
 		}
 	}
 
@@ -277,7 +285,7 @@ void Piece::set_item(PokeItem* new_item) {
 
 void Piece::set_pokeicon(PokemonIcon icon) {
 	pokeicon = icon;
-
+	ability = icon.get_ability();
 	update_sprite();
 }
 
@@ -333,12 +341,12 @@ move_data Piece::move_to(Square& square) {
 		data = item->move_to(square);
 	}
 
-	if (data.attacker_item_slot != NULL and not IS_SAFETY_GOOGLES(data.defenser_item_slot)) {
-		data.attacker_item_slot->after_move_effects(data);
+	if (data.attacker->item != NULL and not HOLDS_SAFETY_GOOGLES(data.defender)) {
+		data.attacker->item->after_move_effects(data);
 	}
 
-	if (data.defenser_item_slot != NULL and not IS_PROTECTIVE_PADS(data.attacker_item_slot)) {
-		data.defenser_item_slot->revenge(data);
+	if (data.defender != NULL and data.defender->item != NULL and not IS_PROTECTIVE_PADS(data.attacker->item)) {
+		data.defender->item->revenge(data);
 	}
 
 	return data;

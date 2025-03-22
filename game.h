@@ -103,7 +103,7 @@ public:
 	bool with_random_battle = false;
 	bool with_duck_chess = false;
 	bool with_antichess = false;
-	bool with_ability = false;
+	bool with_ability = true;
 	bool with_AG = false;
 	bool with_reversed_typechart = false;
 

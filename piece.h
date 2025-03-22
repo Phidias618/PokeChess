@@ -40,7 +40,7 @@ struct move_data {
 		defender = NULL;
 		crit_rate = miss_rate = 0;
 		begin_square = target_square = NULL;
-		attacker_item_slot = defenser_item_slot = NULL;
+		attacker_item_slot = defenser_item_slot = 0;
 	}
 
 	void set_type_matchup_data(Piece* attacker, Piece* defender, Square* target_square);
@@ -53,8 +53,8 @@ struct move_data {
 
 	double miss_rate, crit_rate;
 
-	PokeItem* attacker_item_slot;
-	PokeItem* defenser_item_slot;
+	Uint64 attacker_item_slot;
+	Uint64 defenser_item_slot;
 
 	effectiveness matchup;
 
@@ -139,6 +139,14 @@ public:
 		x = y = -1;
 	}
 
+	inline Uint64 get_ability() {
+		if (x <= 0 or y <= 0 or y >= 19 or x >= 41)
+			return 0;
+		if (ability_array[y - 1][x - 1])
+			PRINT_DEBUG("ability", type_str[0][y-1], ",", x, "->", ability_array[y - 1][x - 1]);
+		return ability_array[y - 1][x - 1];
+	}
+
 	// returns whether it holds a valid sprite or not
 	inline operator bool() {
 		return x >= 0 and y >= 0;
@@ -176,46 +184,63 @@ public:
 	union {
 		Uint64 ability;
 		struct {
-			// the user can't miss not be missed
-			bool ability_no_guard : 1;
-			// the user cannot be crit
-			bool ability_shell_armor : 1;
-			// can steal opposing item on capture if the user is not holding one
-			bool ability_magician : 1;
-			// steal opposing item when captured
-			bool ability_pickpocket : 1;
-			// copy the ability of the last captured piece
-			bool ability_trace : 1;
-			// your item cannot be replaced/remove
-			bool ability_sticky_hold : 1;
-			// you cannot miss
-			bool ability_compound_eye : 1;
-			// if you are not holding an item and capture a piece you will receive honey
-			bool ability_honey_gathering : 1;
-			// same as rocky helmet
-			bool ability_iron_thorns : 1;
-			// +crit chance per captured ally piece
-			bool ability_supreme_overlord : 1;
-			// +crit chance
-			bool ability_sniper : 1;
-			// +crit chance if you are holding flame/toxic orb
-			bool ability_guts : 1;
-			// you can play again if you consume your item (good luck activacting it)
-			bool ability_unburden : 1;
-
-			// gives a fire immunity
-			bool ability_torch : 1;
-			// gives a water immunity
-			bool ability_water_absorb : 1;
-			// gives a grass immunity
-			bool ability_sap_sipper : 1;
-			// gives an electric immunity
-			bool ability_volt_absorb : 1;
-			// gives a ground immunity
-			bool ability_levitate : 1;
+			// the bit fields are stored backwards
+			Uint32 u64;
+			Uint8 u32;
+			bool u24 : 1;
+			bool u23 : 1;
+			bool u22 : 1;
+			bool u21 : 1;
+			
+			bool u20 : 1;
 
 			// -1 effectiveness from fire/ice
 			bool ability_thick_fat : 1;
+
+			// gives a ground immunity
+			bool ability_levitate : 1;
+			// gives an electric immunity
+			bool ability_volt_absorb : 1;
+			
+
+			// gives a grass immunity
+			bool ability_sap_sipper : 1;
+			// gives a water immunity
+			bool ability_water_absorb : 1;
+			
+			// gives a fire immunity
+			bool ability_torch : 1;
+			// you can play again if you consume your item (good luck activacting it)
+			bool ability_unburden : 1;
+
+			// +crit chance if you are holding flame/toxic orb
+			bool ability_guts : 1;
+			// +crit chance
+			bool ability_sniper : 1;
+			// +crit chance per captured ally piece
+			bool ability_supreme_overlord : 1;
+			// same as rocky helmet
+			bool ability_iron_thorns : 1;
+			
+			// if you are not holding an item and capture a piece you will receive honey
+			bool ability_honey_gathering : 1;
+			// you cannot miss
+			bool ability_compound_eye : 1;
+			
+			// your item cannot be replaced/remove
+			bool ability_sticky_hold : 1;
+			// copy the ability of the last captured piece
+			bool ability_trace : 1;
+			
+			// steal opposing item when captured
+			bool ability_pickpocket : 1;
+			// can steal opposing item on capture if the user is not holding one
+			bool ability_magician : 1;
+			
+			// the user cannot be crit
+			bool ability_shell_armor : 1;
+			// the user can't miss not be missed
+			bool ability_no_guard : 1;
 		};
 	};
 

@@ -1005,8 +1005,8 @@ public:
 		if (holder->is_in_graveyard) {
 			consume();
 			used = false;
-			if (data.attacker_item_slot != NULL)
-				data.attacker_item_slot->consume();
+			if (data.attacker->item != NULL)
+				data.attacker->item->consume();
 			data.attacker->item = this;
 			holder = data.attacker;
 			holder->update_sprite();
