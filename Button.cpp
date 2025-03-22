@@ -1687,10 +1687,10 @@ void ChangeGameruleButton::draw() {
 
 	if (on_foreground) {
 		game.draw(icon_sheet, x, y, *gamerule_ptr, 0, 1, 1);
-		game.draw(*sprite, x, y, current_sprite, 0, 1, 1);
+		game.draw(sprite, x, y, current_sprite, 0, 1, 1);
 	}
 	else {
-		game.draw(*sprite, x, y, current_sprite, 0, 1, 1);
+		game.draw(sprite, x, y, current_sprite, 0, 1, 1);
 		game.draw(icon_sheet, x, y, *gamerule_ptr, 0, 1, 1);
 	}
 
