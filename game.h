@@ -90,8 +90,6 @@ public:
 
 	double settings_music_time;
 
-	void resize_drawing_board(int new_tile_size);
-
 	Board& board;
 
 	Piece* promoting_piece;

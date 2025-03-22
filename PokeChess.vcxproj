@@ -168,7 +168,6 @@
     <ClCompile Include="assets.cpp" />
     <ClCompile Include="board.cpp" />
     <ClCompile Include="Button.cpp" />
-    <ClCompile Include="Debugger.h" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="item.cpp" />
     <ClCompile Include="main.cpp" />
@@ -182,6 +181,7 @@
     <ClInclude Include="board.h" />
     <ClInclude Include="BaseButton.h" />
     <ClInclude Include="Button.h" />
+    <ClInclude Include="Debugger.h" />
     <ClInclude Include="game.h" />
     <ClInclude Include="item.h" />
     <ClInclude Include="piece.h" />

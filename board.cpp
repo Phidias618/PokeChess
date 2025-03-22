@@ -1,7 +1,6 @@
 #include <iostream>
 #include <exception>
 
-
 #include "SDL+.h"
 #include "board.h"
 #include "piece.h"
@@ -128,7 +127,7 @@ auto File::operator[](int i) -> Square& {
 	if (0 <= i && i < 8)
 		return data[i];
 	else {
-		PRINT_DEBUG("i: " << i);
+		PRINT_DEBUG("i:", i);
 		throw std::exception();
 	}
 }
@@ -290,7 +289,7 @@ bool Board::in_stalemate(piece_color color) {
 		if (begin_square.piece != NULL and begin_square.piece->color == color) {
 			for (Square& target_square : self) {
 				if (begin_square.piece->base_can_move_to(target_square)) {
-					PRINT_DEBUG("piece at (" << begin_square.x << ", " << begin_square.y << ") can move to (" << target_square.x << ", " << target_square.y << ")");
+					PRINT_DEBUG("piece at (", begin_square.x, ",", begin_square.y, ") can move to (", target_square.x, ",", target_square.y, ")");
 					return false;
 				}
 			}

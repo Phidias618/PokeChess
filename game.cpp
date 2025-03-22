@@ -2,7 +2,6 @@
 #include <cstring>
 
 #include "game.h"
-#include "Debugger.h"
 
 #include "SDL+.h"
 
@@ -58,7 +57,7 @@ void Game::init() {
 	std::random_device rand;
 	RNG.seed(rand());
 
-	window = Display("test", 18 * TILE_SIZE, 12 * TILE_SIZE, SDL_WINDOW_RESIZABLE);
+	window = Display("test", 18 * TILE_SIZE / 2, 12 * TILE_SIZE / 2, SDL_WINDOW_RESIZABLE|SDL_WINDOW_FULLSCREEN);
 	screen = window.get_surface();
 
 	is_holding_something = false;
@@ -109,20 +108,6 @@ void Game::reset() {
 	active_textbox = last_textbox = NULL;
 
 	board.reset();
-}
-
-void Game::resize_drawing_board(int new_tile_size) {
-	double old_factor = scaling_factor;
-	scaling_factor = (double)new_tile_size / 64;
-	load_all_sprites(new_tile_size);
-
-	drawing_board = Surface::createRGB(18 * TILE_SIZE, 12 * TILE_SIZE);
-	board.resize_surface();
-	buttons->resize();
-	global_buttons->resize();
-	if (previous_buttons != NULL) {
-		previous_buttons->resize();
-	}
 }
 
 
@@ -409,13 +394,13 @@ void Game::to_menu() {
 
 	buttons->clear();
 	buttons->add(new BeginGameButton());
-	buttons->add(new ChangeGameruleButton(14.0, 3.0, &with_RNG, &pokeball_img, false, 1, 0, "avec de l'Aléatoire", "with RNG"));
-	buttons->add(new ChangeGameruleButton(14.0, 4.0, &with_random_battle, &unown_questionmark_animated, true, 16, FPS/8, "Team Aléatoire", "Random Teams"));
-	buttons->add(new ChangeGameruleButton(14.0, 5.0, &with_items, new Surface(), true, 1, 0, "Objets", "Items"));
-	buttons->add(new ChangeGameruleButton(14.0, 6.0, &with_AG, &AG_icon, true, 1, 0, "", "Anything Goes"));
-	buttons->add(new ChangeGameruleButton(14.0, 7.0, &with_antichess, &pokeball_img, false, 1, 0, "Anti-echec", "Suicide Cup"));
-	buttons->add(new ChangeGameruleButton(14.0, 8.0, &with_duck_chess, &psyduck_sprite, true, 1, 0, "Echec Psykokwak", "Psyduck Chess"));
-	buttons->add(new ChangeGameruleButton(14.0, 9.0, &with_reversed_typechart, new Surface(), true, 1, 0, "Reverse Battle", "Reverse Battle"));
+	buttons->add(new ChangeGameruleButton(14.0, 3.0, &with_RNG, pokeball_img, false, 1, 0, "avec de l'Aléatoire", "with RNG"));
+	buttons->add(new ChangeGameruleButton(14.0, 4.0, &with_random_battle, unown_questionmark_animated, true, 16, FPS/8, "Team Aléatoire", "Random Teams"));
+	buttons->add(new ChangeGameruleButton(14.0, 5.0, &with_items, NULL, true, 1, 0, "Objets", "Items"));
+	buttons->add(new ChangeGameruleButton(14.0, 6.0, &with_AG, AG_icon, true, 1, 0, "", "Anything Goes"));
+	buttons->add(new ChangeGameruleButton(14.0, 7.0, &with_antichess, pokeball_img, false, 1, 0, "Anti-echec", "Suicide Cup"));
+	buttons->add(new ChangeGameruleButton(14.0, 8.0, &with_duck_chess, psyduck_sprite, true, 1, 0, "Echec Psykokwak", "Psyduck Chess"));
+	buttons->add(new ChangeGameruleButton(14.0, 9.0, &with_reversed_typechart, NULL, true, 1, 0, "Reverse Battle", "Reverse Battle"));
 	reset();
 }
 

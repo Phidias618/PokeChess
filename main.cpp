@@ -3,7 +3,6 @@
 #include <string>
 
 #include "SDL+.h"
-#include "Debugger.h"
 
 #include "assets.h"
 
@@ -52,8 +51,8 @@ int main(int argc, char* args[])
 
 void get_drawing_board_coordinates(Sint32 x, Sint32 y, double* new_x, double* new_y) {
 	// sets *new_x and *new_y with the tile coordinates of (x, y) relative to the top left corner
-	*new_x = ((double)x - game.corner_x) / (double)TILE_SIZE;
-	*new_y = ((double)y - game.corner_y) / (double)TILE_SIZE;
+	*new_x = ((double)x - game.corner_x) / (double)(game.screen->w - 2 * game.corner_x) * 18;
+	*new_y = ((double)y - game.corner_y) / (double)(game.screen->h - 2 * game.corner_y) * 12;
 }
 
 auto draw_frame() -> void {
@@ -118,18 +117,23 @@ auto draw_frame() -> void {
 
 	dest_rect.x = game.corner_x;
 	dest_rect.y = game.corner_y;
-
-	game.screen.blit(game.drawing_board, &dest_rect, NULL);
+	dest_rect.w = game.screen->w - 2 * game.corner_x;
+	dest_rect.h = game.screen->h - 2 * game.corner_y;
+	//SDL_RenderClear(game.window_renderer);
+	//SDL_RenderTexture(game.window_renderer, SDL_CreateTextureFromSurface(game.window_renderer, game.drawing_board), NULL, NULL);
+	
+	SDL_BlitSurfaceScaled(game.drawing_board, NULL, game.screen, &dest_rect, SDL_SCALEMODE_LINEAR);
+	// game.screen.blit(game.drawing_board, &dest_rect, NULL);
 
 	Uint64 t7 = SDL_GetTicks();
 
-	if (false) {
+#if SHOW_DRAWING_TIME
 		PRINT_DEBUG("time to clear the previous surface: " << t2 - t1 << "ms");
 		PRINT_DEBUG("time to draw the graveyards: " << t4 - t3 << "ms");
 		PRINT_DEBUG("time to draw the buttons: " << t5 - t4 << "ms");
 		PRINT_DEBUG("time to draw the selected thing: " << t6 - t5 << "ms");
 		PRINT_DEBUG("time draw the drawing board onto the screen: " << t7 - t6 << "ms\n");
-	}
+#endif
 }
 
 
@@ -150,13 +154,14 @@ void handle_event(SDL_Event e) {
 
 		double ratio = (double)game.screen->w / (double)game.screen->h;
 		if (ratio <= 1.5) {
-			game.resize_drawing_board(game.screen->w / 18);
+			game.corner_x = 0;
+			game.corner_y = (game.screen->h - (game.screen->w / 1.5)) / 2;
 		}
 		else {
-			game.resize_drawing_board(game.screen->h / 12);
+			game.corner_x = (game.screen->w - (game.screen->h * 1.5)) / 2;
+			game.corner_y = 0;
+
 		}
-		game.corner_x = (game.screen->w - game.drawing_board->w) / 2;
-		game.corner_y = (game.screen->h - game.drawing_board->h) / 2;
 		Uint64 t7 = SDL_GetTicks();
 
 		printf("\nTemps du redimensionnage: %lldms\n", t7 - t5);

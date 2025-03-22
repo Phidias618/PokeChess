@@ -1,7 +1,7 @@
 #include "SDL+.h"
 #include "assets.h"
 
-int TILE_SIZE = 64;
+int TILE_SIZE = 128;
 int ITEM_SIZE = TILE_SIZE / 2;
 int ITEM_MINI_SIZE = TILE_SIZE / 3;
 int ITEM_MEGA_SIZE = 4 * TILE_SIZE / 4;
@@ -136,7 +136,7 @@ void* load_all_sprites(int __tile_size) {
 
 	AG_icon = load_img("assets\\Sprites\\AG_icon.png").scale_to(TILE_SIZE, TILE_SIZE, true);
 
-	PRINT_DEBUG("\n\nFIN DU CHARGEMENT\n\n")
+	PRINT_DEBUG("\n\nFIN DU CHARGEMENT\n\n");
 	return NULL;
 }
 

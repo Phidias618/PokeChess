@@ -3,7 +3,6 @@
 #include <cstdarg>
 
 #include "SDL+.h"
-#include "Debugger.h"
 
 #include "assets.h"
 

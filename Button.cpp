@@ -126,7 +126,7 @@ bool ButtonCollection::click(int mouse_button, double x, double y) {
 }
 
 void Button::kill() {
-	PRINT_DEBUG("kill " << this);
+	PRINT_DEBUG("kill ", this);
 	if (this == Button::pressed_button) {
 		Button::pressed_button = NULL;
 	}
@@ -682,12 +682,11 @@ void TextBoxDisplay::draw() {
 		}
 	}
 
-	Surface scaled = sprite.scale_by(8.0 * TILE_SIZE / sprite->w, true);
-	game.draw(scaled, x, y, (side == white) ? bottom_left : top_left);
+	game.draw(sprite, x, y, (side == white) ? bottom_left : top_left);
 }
 
 TextBoxDisplay::~TextBoxDisplay() {
-	PRINT_DEBUG("free " << this);
+	PRINT_DEBUG("free ", this);
 }
 
 SkipBonusMoveButton::SkipBonusMoveButton(double x_, double y_) : Button(x_ - skip_button->w / 2.0 / TILE_SIZE, y_ - skip_button->h / 2.0 / TILE_SIZE, (double)skip_button->w / TILE_SIZE, (double)skip_button->h / TILE_SIZE) {
@@ -1661,7 +1660,7 @@ void PhoneSwitchPage::effect(int, double, double) {
 }
 
 
-ChangeGameruleButton::ChangeGameruleButton(double _x, double _y, bool* ptr, Surface* _sprite, bool _on_foreground, short _animation_length, short _period, char const* msg0...) : 
+ChangeGameruleButton::ChangeGameruleButton(double _x, double _y, bool* ptr, Surface _sprite, bool _on_foreground, short _animation_length, short _period, char const* msg0...) : 
 	Button(_x, _y, 1, 1),
 	gamerule_ptr(ptr),
 	sprite(_sprite),

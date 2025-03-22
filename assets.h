@@ -4,6 +4,7 @@ extern int TILE_SIZE;
 extern int ITEM_SIZE, ITEM_MINI_SIZE, ITEM_MEGA_SIZE;
 
 #include "SDL+.h"
+#include "Debugger.h"
 
 void* load_all_sprites(int tile_size);
 

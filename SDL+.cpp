@@ -64,7 +64,6 @@ auto Surface::scale_to(int w2, int h2, bool smooth) -> Surface {
 	Surface result = zoomSurface(surface, (double)w2 / w1, (double)h2 / h1, smooth);
 	
 	if (result == NULL) {
-		PRINT_DEBUG("scale_to qui marche pas");
 		throw std::exception("rotozoom failed");
 	}
 
@@ -76,7 +75,6 @@ Surface Surface::scale_by(double factor, bool smooth) {
 		return NULL;
 	Surface result = zoomSurface(surface, factor, factor, smooth);
 	if (result == NULL) {
-		PRINT_DEBUG("scale_by qui marche pas");
 		throw std::exception("rotozoom failed");
 	}
 

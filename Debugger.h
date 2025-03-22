@@ -3,13 +3,24 @@
 #include <iostream>
 
 #if IN_DEBUG
-#define PRINT_DEBUG(truc) std::cout << truc << '\n';
+static void PRINT_DEBUG() {
+	std::cout << '\n';
+}
+
+template<typename T1, typename... Args>
+static inline void PRINT_DEBUG(T1 val, Args... other) {
+	std::cout << val << ' ';
+	PRINT_DEBUG(other...);
+}
 
 #define PRINT_VAR(var) std::cout << #var << " = " << var << '\n';
 
 #else
-#define PRINT_DEBUG(truc)
+
+#define PRINT_DEBUG(...)
 #define PRINT_VAR(var)
+
 #endif
 
+#define SHOW_DRAWING_TIME false
 #define SHOW_BUTTON_HITBOX false

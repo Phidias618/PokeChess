@@ -15,9 +15,6 @@ class Display;
 #include <iostream>
 #include <string>
 
-
-#include "Debugger.h"
-
 #define self (*this)
 
 enum anchor : char {
@@ -142,6 +139,7 @@ public:
 		surface = other.surface;
 		other.surface = NULL;
 	}
+
 	inline Surface copy() {
 		Surface new_surface = SDL_CreateSurface(surface->w, surface->h, surface->format);
 		SDL_SetSurfacePalette(new_surface, SDL_GetSurfacePalette(surface));

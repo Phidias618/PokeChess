@@ -413,7 +413,7 @@ public:
 class ChangeGameruleButton : public Button {
 	bool on_foreground;
 	bool* const gamerule_ptr;
-	Surface* const sprite;
+	Surface const sprite;
 
 	char const* message[(int)LANGUAGE::NB_OF_LANGUAGE];
 
@@ -422,7 +422,7 @@ class ChangeGameruleButton : public Button {
 	short current_sprite = 0;
 	short animation_counter = 0;
 public:
-	ChangeGameruleButton(double x, double y, bool* gamerule_ptr, Surface* sprite, bool on_foreground, short animation_length, short period, char const* msg0...);
+	ChangeGameruleButton(double x, double y, bool* gamerule_ptr, Surface sprite, bool on_foreground, short animation_length, short period, char const* msg0...);
 
 	virtual void draw();
 
