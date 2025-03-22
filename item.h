@@ -62,6 +62,7 @@ enum class item_id : short {
 	safety_googles,
 	everstone,
 	iron_ball,
+	quick_claw,
 };
 
 // the property of an item can be both determined by virtual methods and with id for more specific effects
@@ -148,7 +149,7 @@ extern int number_of_drawed_terashard;
 #define IS_PROTECTIVE_PADS(item) ((item) != NULL and (item)->id == item_id::protective_pads)
 #define IS_HONEY(item) ((item) != NULL and (item)->id == item_id::honey)
 
-
+#define IS_QUICK_CLAW(item) ((item) != NULL and item->id == item_id::quick_claw)
 
 #define NB_OF_ITEMS 100
 extern ItemClass item_table[NB_OF_ITEMS];

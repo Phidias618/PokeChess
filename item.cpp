@@ -897,7 +897,7 @@ public:
 	}
 
 	virtual void crit_modifier(move_data& data) {
-		for (move_data const d : holder->board.move_historic) {
+		for (move_data const& d : holder->board.move_historic) {
 			if (d.attacker->color == holder->color) {
 				if (d.attacker == holder && d.defender != NULL) {
 					nb_of_consecutives++;
@@ -931,6 +931,38 @@ dstr_t Metronome::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 dstr_t Metronome::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 	{" - Augmente le taux de critique pour chaques coups consecutifs.\n", 1}, // FRENCH
 	{" - Increase critical hit rate for each consecutive moves.\n", 1}, // ENGLISH
+	{"", 1}, // GERMAN
+	{"", 1}, // SPANISH
+	{"", 1}, // ITALIAN
+};
+
+class QuickClaw : public PokeItem {
+public:
+	static const bool RNG = true;
+
+	QuickClaw(Piece* piece, ItemClass& IC) : PokeItem(piece, item_id::quick_claw, 0, IC) {};
+
+	defdraw(3, 3);
+
+	static int usefulness_tier(Piece* piece) {
+		return 2;
+	}
+
+	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
+	static dstr_t description[(int)LANGUAGE::NB_OF_LANGUAGE];
+};
+
+dstr_t QuickClaw::name[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{"Vive Griffe", 1}, // FRENCH
+	{"Quick Claw", 1}, // ENGLISH
+	{"Flinkklaue", 1}, // GERMAN
+	{"Garra Rapida", 1}, // SPANISH
+	{"Rapidartigli", 1}, // ITALIAN
+};
+
+dstr_t QuickClaw::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
+	{" - Rend son utilisateur capable d'infliger des coups critiques n'importe ou.\n", 1}, // FRENCH
+	{" - Makes its user able to crit everywhere.\n", 1}, // ENGLISH
 	{"", 1}, // GERMAN
 	{"", 1}, // SPANISH
 	{"", 1}, // ITALIAN
@@ -1857,7 +1889,7 @@ dstr_t TeraShard<t>::description[(int)LANGUAGE::NB_OF_LANGUAGE] = {
 	{to_c_str(std::string("Teralite ").append(type_str[4][t])), 1}, // ITALIAN
 };
 
-Uint32 get_name_hash(char const* name) {
+constexpr Uint32 get_name_hash(char const* name) {
 	Uint32 res = 0;
 	Uint32 p = 1;
 	while (name[0] != '\0') {
@@ -1960,6 +1992,7 @@ Itemize(Class<fairy>);
 	Itemize(LightBall);
 	Itemize(LoadedDice);
 	Itemize(Metronome);
+	Itemize(QuickClaw);
 	
 	//return NULL;
 

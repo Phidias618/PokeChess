@@ -44,6 +44,12 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 	attacker_item_slot = get_item_hash(attacker->item);
 	if (defender != NULL)
 		defenser_item_slot = get_item_hash(defender->item);
+	else {
+		if (IS_QUICK_CLAW(attacker->item) and (double)game.RNG() / (double)game.RNG.max() < crit_rate) {
+			do_crit = move_again = true;
+		}
+	}
+
 
 	if (not game.with_typing or defender == NULL)
 		return;
