@@ -5,3 +5,5 @@ boost_arrow.png: https://www.spriters-resource.com/game_boy_advance/pokemonemera
 start_button.png: https://similarpng.com/start-button-icon-isolated-on-transparent-background-png/
 typing_icon.png: https://www.deviantart.com/lugia-sea/art/Pokemon-Type-Icons-Vector-869706864  (probably)
 phone_frame.png: https://www.deviantart.com/unitedworldmedia/art/Rotom-Phone-2-877054359
+
+tera_mosaic.png: https://research.rug.nl/en/publications/acting-individually-or-together-an-investigation-of-childrens-dev

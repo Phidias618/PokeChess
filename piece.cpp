@@ -250,6 +250,57 @@ void Piece::update_sprite() {
 		pokeicon.draw(sprite, TILE_SIZE/8, TILE_SIZE/8);
 	}
 
+	if (type != base_type) {
+		if (sprite.MUSTLOCK())
+			sprite.lock();
+
+		Uint32* p1 = (Uint32*)sprite->pixels;
+		Uint32* p2 = (Uint32*)tera_mosaic->pixels;
+
+		Uint32* end = p1 + sprite->h * sprite->pitch / 4;
+
+		//float const mix_factor = 0.75f;
+
+		while (p1 != end) {
+			
+			for (int X = 0; X < sprite->w; X++) {
+				Uint8 a1 = p1[X] >> 24;
+				if (a1 != 0) {
+					float mix_factor = (float)(p2[X] & 0xff) / 255;
+					mix_factor *= mix_factor; // ^2
+					mix_factor *= mix_factor * mix_factor; // ^6
+
+					Uint32 shade = type_color[type];
+					Uint8 r1 = p1[X];
+					Uint8 r2 = shade;
+
+					Uint8 g1 = p1[X] >> 8;
+					Uint8 g2 = (shade >> 8);
+
+					Uint8 b1 = p1[X] >> 16;
+					Uint8 b2 = (shade >> 16);
+
+					Uint8 a2 = 0xff;
+
+					p1[X] &= 0x00000000;
+					p1[X] |= (Uint32)(mix_factor * r2 + (1 - mix_factor) * r1);
+					p1[X] |= (Uint32)(mix_factor * g2 + (1 - mix_factor) * g1) << 8;
+					p1[X] |= (Uint32)(mix_factor * b2 + (1 - mix_factor) * b1) << 16;
+					p1[X] |= (Uint32)(mix_factor * a2 + (1 - mix_factor) * a1) << 24;
+
+				}
+
+			}
+
+			p1 += sprite->pitch / 4;
+			p2 += tera_mosaic->pitch / 4;
+		}
+
+		if (sprite.MUSTLOCK())
+			sprite.unlock();
+
+	}
+
 	dest = { 5 * TILE_SIZE / 8, 5 * TILE_SIZE / 8, 0, 0 };
 	if (type != typeless)
 		sprite.blit(typing_icon[type].scale_to(TILE_SIZE / 3, TILE_SIZE / 3, true), &dest, NULL);

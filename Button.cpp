@@ -469,7 +469,7 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 
 		if (game.with_AG) {
 			for (int i = 0; i < 16; i++) {
-				list[i] = (typing)(rd() % (fairy - normal) + normal);
+				list[i] = (typing)(rd() % 18);
 			}
 		}
 		else {
@@ -514,7 +514,7 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 		while (j > 0) {
 			Piece* piece = game.board[x][y].piece;
 			std::shuffle(list, list + NB_OF_ITEMS, gen);
-			std::sort(
+			std::stable_sort(
 				list, 
 				list + NB_OF_ITEMS, 
 				[&piece]

@@ -71,10 +71,10 @@ enum class pokestat : char {
 };
 
 enum effectiveness_enum : char {
-	immune = 0,
-	not_very_effective = 1,
-	neutral = 2,
-	super_effective = 3,
+	immune = -1,
+	not_very_effective = 0,
+	neutral = 1,
+	super_effective = 2,
 };
 #if false
 const char* defensive_effectiveness_str[(int)LANGUAGE::NB_OF_LANGUAGE][4] = {

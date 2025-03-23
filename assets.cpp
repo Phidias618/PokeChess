@@ -19,6 +19,7 @@ Surface exit_cross;
 Surface unown_questionmark_animated;
 Surface clink_animated;
 
+Surface tera_mosaic;
 Surface start_button;
 
 Surface typing_icons_sprite_sheet;
@@ -32,6 +33,27 @@ Surface pokeball_img, megaphone_img;
 
 
 Font CSM_font_array[128];
+
+Color type_color[18] = {
+	0xff9099a1,
+	0xffff9c54,
+	0xff4d90d5,
+	0xff63bb5b,
+	0xfff3d23b,
+	0xff74cec0,
+	0xffce4069,
+	0xffab6ac8,
+	0xffd97746,
+	0xff92aade,
+	0xfff97176,
+	0xff90c12c,
+	0xffc7b78b,
+	0xff5269ac,
+	0xff096dc4,
+	0xff5a5366,
+	0xff5a8ea1,
+	0xffec8fe6
+};
 
 void* load_all_fonts() {
 	for (int i = 0; i < 128; i++) {
@@ -91,7 +113,7 @@ static int true_mod(int x, int y) {
 	return (x % y + y) % y;
 }
 
-
+static SDL_Palette* GS_palette;
 
 void* load_all_sprites(int __tile_size) {
 	TILE_SIZE = __tile_size;
@@ -99,6 +121,14 @@ void* load_all_sprites(int __tile_size) {
 	ITEM_MEGA_SIZE = 4 * TILE_SIZE / 4;
 	ITEM_MINI_SIZE = 3 * TILE_SIZE / 8;
 	textbox_frame = load_img("assets\\Sprites\\textbox_frame.png");
+
+	if (GS_palette == NULL) {
+		GS_palette = SDL_CreatePalette(256);
+		for (int i = 0; i < 256; i++) {
+			GS_palette->colors[i] = {(unsigned char)i, (unsigned char)i, (unsigned char)i, 255};
+		}
+	}
+
 
 
 	poke_charset = load_img("assets\\Sprites\\charset.png");
@@ -146,6 +176,8 @@ void* load_all_sprites(int __tile_size) {
 	psyduck_active_sprite = load_img("assets\\Sprites\\psyduck_active.png").scale_to(TILE_SIZE, TILE_SIZE, true);
 
 	AG_icon = load_img("assets\\Sprites\\AG_icon.png").scale_to(TILE_SIZE, TILE_SIZE, true);
+
+	tera_mosaic = load_img("assets\\Sprites\\tera_mosaic.png").scale_to(TILE_SIZE, TILE_SIZE, true).convertTo(SDL_PIXELFORMAT_XRGB8888);
 
 	PRINT_DEBUG("\n\nFIN DU CHARGEMENT\n\n");
 	return NULL;
