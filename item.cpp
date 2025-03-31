@@ -166,7 +166,7 @@ public:
 	}
 
 	virtual void update_pokeicon() {
-		if (holder->type == old_type)
+		if (holder->base_type == old_type)
 			holder->set_pokeicon(PokemonIcon(21 + holder->color, 1 + new_type));
 	}
 
@@ -182,7 +182,7 @@ public:
 	static dstr_t name[(int)LANGUAGE::NB_OF_LANGUAGE];
 
 	static bool would_be_useful(Piece* piece) {
-		return piece->Class == Pawn::cls && piece->type == old_type;
+		return piece->Class == Pawn::cls && piece->base_type == old_type;
 	}
 
 #define ctor(Class) [](Board& b, piece_color c, Square* sq, typing t, PokeItem* i) -> Piece* { \
@@ -193,7 +193,7 @@ public:
 }
 
 	virtual bool prepare_promotion() {
-		if (holder->type == old_type) {
+		if (holder->base_type == old_type) {
 
 			game.buttons->add(new PromotionButton(ctor(Queen), 7.0, 5.5));
 			game.buttons->add(new PromotionButton(ctor(Rook), 8.0, 5.5));
@@ -206,8 +206,9 @@ public:
 	}
 
 #undef ctor
-	virtual void promote() {
-		if (holder->type == new_type) {
+	virtual void promote(Piece* new_holder) {
+		holder = new_holder;
+		if (holder->base_type == new_type) {
 			consume();
 		}
 	}
@@ -1037,9 +1038,16 @@ public:
 		if (holder->is_in_graveyard) {
 			consume();
 			used = false;
-			if (data.attacker->item != NULL)
-				data.attacker->item->consume();
+			if (data.attacker->item != NULL) {
+				PokeItem* i = data.attacker->item;
+				i->consume();
+				delete i;
+			}
 			data.attacker->item = this;
+
+			holder->item = NULL;
+			holder->update_sprite();
+
 			holder = data.attacker;
 			holder->update_sprite();
 		}
@@ -1158,7 +1166,7 @@ public:
 
 	virtual move_data move_to(Square& target) {
 		move_data data = holder->base_move_to(target);
-		consume();
+		used = true;
 		return data;
 	}
 	
@@ -1170,6 +1178,7 @@ public:
 			strcat_s(buffer, "\nfled successfuly");
 			game.add_textbox(buffer);
 			consume();
+			delete this;
 		}
 	}
 
@@ -1393,6 +1402,7 @@ public:
 	virtual void after_move_effects(move_data& data) {
 		if (not (data.do_miss or data.do_crit or data.defender == NULL or data.cancel)) {
 			consume();
+			delete this;
 		}
 	}
 
@@ -1439,10 +1449,10 @@ public:
 		holder->has_already_move = false;
 		bool res = false;
 		if (holder->Class == Pawn::cls) {
-			res = (dynamic_cast<Pawn*>(holder))->can_double_step(target);
+			res = (dynacast<Pawn>(holder))->can_double_step(target);
 		}
 		else if (holder->Class == King::cls) {
-			res = (dynamic_cast<King*>(holder)->can_castle(target));
+			res = (dynacast<King>(holder)->can_castle(target));
 		}
 		holder->has_already_move = true;
 		return res;
@@ -1451,8 +1461,10 @@ public:
 	virtual move_data move_to(Square& target) {
 		holder->has_already_move = false;
 		move_data data = holder->base_move_to(target);
+		data.was_piece_first_move = false;
 		holder->has_already_move = true;
 		consume();
+		delete this;
 		return data;
 	}
 
@@ -1593,7 +1605,8 @@ public:
 			data.crit_rate *= 3;
 	}
 
-	void promote() {
+	void promote(Piece* new_holder) {
+		holder = new_holder;
 		if (holder->type == electric) {
 			holder->set_pokeicon(PokemonIcon(27 + 2 * holder->Class->id + holder->color, 1 + electric));
 		}
@@ -1737,7 +1750,7 @@ public:
 }
 
 	virtual bool prepare_promotion() {
-		if (holder->type == t1 or holder->type == t2) {
+		if (holder->base_type == t1 or holder->base_type == t2) {
 
 			game.buttons->add(new PromotionButton(ctor(King), 6.5, 5.5));
 			game.buttons->add(new PromotionButton(ctor(Queen), 7.5, 5.5));
@@ -1751,9 +1764,11 @@ public:
 	}
 #undef ctor
 
-	virtual void promote() {
+	virtual void promote(Piece* new_holder) {
+		holder = new_holder;
 		if (holder->Class == King::cls) {
 			consume();
+			// delete this;
 		}
 	}
 };

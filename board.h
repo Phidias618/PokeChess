@@ -10,6 +10,8 @@ class BoardIterator;
 #include <forward_list>
 #include <stack>
 
+#include "Debugger.h"
+
 #include "SDL+.h"
 
 #include "game.h"
@@ -60,7 +62,15 @@ private:
 
 public:
 
-	Square& operator[](int i);
+	inline Square& operator[](int i) {
+#if ENABLE_SAFETY_CHECKS
+		if (i < 0 or i >= 8) {
+			PRINT_DEBUG("Out of Bounds board access");
+			throw;
+		}
+#endif
+		return data[i];
+	}
 
 	void clear();
 
@@ -87,9 +97,7 @@ public:
 	
 	Piece* white_graveyard[16];
 	Piece* black_graveyard[16];
-
-	std::stack<PokeItem*> item_graveyard;
-
+	
 	Color light_square_color;
 	Color dark_square_color;
 	Color selected_piece_color;
@@ -133,7 +141,21 @@ public:
 
 	move_data const get_last_nonduck_move();
 
-	File& operator[](int i);
+	void cancel_last_move();
+
+	void set_reachable();
+
+	void move_piece_to(Piece*, Square&);
+
+	inline File& operator[](int i) {
+#if ENABLE_SAFETY_CHECKS
+		if (i < 0 or i >= 8) {
+			PRINT_DEBUG("Out of Bounds board access");
+			throw;
+		}
+#endif
+		return grid[i];
+	}
 
 	~Board();
 

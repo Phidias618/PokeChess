@@ -1,5 +1,5 @@
 #pragma once
-#define IN_DEBUG true
+#define IN_DEBUG false
 #include <iostream>
 
 #if IN_DEBUG
@@ -21,6 +21,8 @@ static inline void PRINT_DEBUG(T1 val, Args... other) {
 #define PRINT_VAR(var)
 
 #endif
+
+#define ENABLE_SAFETY_CHECKS true
 
 #define SHOW_DRAWING_TIME false
 #define SHOW_BUTTON_HITBOX false

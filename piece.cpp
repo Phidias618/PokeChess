@@ -1,6 +1,7 @@
 /*This files contains all the code related to chess piece*/
 
 #include <cstdarg>
+#include <functional>
 
 #include "SDL+.h"
 
@@ -9,7 +10,7 @@
 #include "poketyping.h"
 #include "piece.h"
 
-#define set_cls(Class, id, ...) PieceClass  Class::__cls = PieceClass([](Board& board, piece_color color, Square* sq, typing type, PokeItem* item) -> Piece* { return new Class(board, color, sq, type, item);  }, id, __VA_ARGS__); PieceClass* const Class::cls = &Class::__cls;
+#define set_cls(Class, id, ...) PieceClass  Class::__cls = PieceClass(std::function<Class* (Board&, piece_color, Square*, typing, PokeItem*)>([](Board& board, piece_color color, Square* sq, typing type, PokeItem* item) -> Class* { return new Class(board, color, sq, type, item);  }), id, __VA_ARGS__); PieceClass* const Class::cls = &Class::__cls;
 
 set_cls(King, 0, "Roi", "King");
 set_cls(Queen, 1, "Dame", "Queen");
@@ -32,6 +33,38 @@ constexpr int ABS_INT(int x) {
 }
 
 
+std::ostream& operator<<(std::ostream& os, move_data const data) {
+	if (data.attacker != NULL) {
+		os << "attacker: " << data.attacker->Class->name[1] << " at (" << data.attacker->x << ", " << data.attacker->y << ")\n";
+	}
+	else {
+		os << "attacker: None\n";
+	}
+	if (data.target_square != NULL)
+		os << "target: (" << data.target_square->x << ", " << data.target_square->y << ")\n";
+	else
+		os << "target: None\n";
+	os << "defender: " << ((data.defender == NULL) ? "None" : data.defender->Class->name[1]) << '\n';
+	os << '\n';
+	if (data.castling)
+		os << "castling\n";
+	if (data.cancel)
+		os << "canceled\n";
+	if (data.move_again)
+		os << "bonus move\n";
+	if (data.promotion)
+		os << "promotion\n";
+	if (data.en_passant)
+		os << "en passant\n";
+	if (data.skip_bonus_turn)
+		os << "skip\n";
+	if (data.tera)
+		os << "tera into " << type_str[data.attacker->type][1] << '\n';
+	os << "---------------------\n";
+	return os;
+}
+
+
 void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square* target_square_) {
 	attacker = attacker_;
 	defender = defender_;
@@ -41,9 +74,12 @@ void move_data::set_type_matchup_data(Piece* attacker_, Piece* defender_, Square
 	miss_rate = attacker->board.miss_rate;
 	crit_rate = attacker->board.crit_rate;
 
-	attacker_item_slot = get_item_hash(attacker->item);
+	was_piece_first_move = not attacker->has_already_move;
+
+	attacker_item_hash = get_item_hash(attacker->item);
+
 	if (defender != NULL)
-		defenser_item_slot = get_item_hash(defender->item);
+		defenser_item_hash = get_item_hash(defender->item);
 	else {
 		if (IS_QUICK_CLAW(attacker->item) and (double)game.RNG() / (double)game.RNG.max() < crit_rate) {
 			do_crit = move_again = true;
@@ -168,7 +204,8 @@ PieceClass::PieceClass(int _id, char const* names...) : constructor(NULL), id(_i
 	va_end(args);
 }
 
-PieceClass::PieceClass(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> ctor, int id_, const char* names...) : id(id_), constructor(ctor) {
+template<typename T>
+PieceClass::PieceClass(std::function<T* (Board&, piece_color, Square*, typing, PokeItem*)> ctor, int id_, const char* names...) : id(id_), constructor(ctor) {
 	base_promotion_constructor =
 		[this](Board& b, piece_color c, Square* sq, typing t, PokeItem* i) -> Piece* {
 			Piece* res = constructor(b, c, sq, t, i);
@@ -184,6 +221,10 @@ PieceClass::PieceClass(std::function<Piece* (Board&, piece_color, Square*, typin
 		name[i] = va_arg(args, char const*);
 	}
 	va_end(args);
+
+	T* piece = ctor(game.board, no_color, NULL, typeless, NULL);
+	offset = (Uint8*)(Piece*)piece - (Uint8*)piece;
+	delete piece;
 }
 
 PieceClass& PieceClass::operator=(const PieceClass& other) {
@@ -250,7 +291,7 @@ void Piece::update_sprite() {
 		pokeicon.draw(sprite, TILE_SIZE/8, TILE_SIZE/8);
 	}
 
-	if (type != base_type) {
+	if (is_tera) {
 		if (sprite.MUSTLOCK())
 			sprite.lock();
 
@@ -258,8 +299,6 @@ void Piece::update_sprite() {
 		Uint32* p2 = (Uint32*)tera_mosaic->pixels;
 
 		Uint32* end = p1 + sprite->h * sprite->pitch / 4;
-
-		//float const mix_factor = 0.75f;
 
 		while (p1 != end) {
 			
@@ -322,7 +361,26 @@ void Piece::set_type(typing new_type) {
 
 void Piece::tera(typing new_type) {
 	type = new_type;
+	is_tera = true;
 	update_sprite();
+
+	if (color == white) {
+		board.white_tera = false;
+	}
+	else {
+		board.black_tera = false;
+	}
+}
+
+void Piece::un_tera() {
+	type = base_type;
+	is_tera = false;
+	update_sprite();
+
+	if (color == white)
+		board.white_tera = true;
+	else
+		board.black_tera = true;
 }
 
 void Piece::set_item(PokeItem* new_item) {
@@ -346,14 +404,14 @@ void Piece::set_pokeicon(PokemonIcon icon) {
 	update_sprite();
 }
 
-bool Piece::base_can_move_to(Square& target_square) {
-	if (board.in_bonus_move and board.last_move_data.attacker != this)
-		return false; // when you are allowed to play twice or more, you can only move the same piece
-
-	if (target_square.piece != NULL and target_square.piece->Class == Duck::cls)
+bool Piece::base_can_move_to(Square& target) {
+	Piece* p = target.piece;
+	if (p != NULL and (p->Class == Duck::cls or p->color == color))
 		return false;
 
-	auto target_piece = target_square.piece;
+	return ((reachable_square >> (target.x + (target.y << 3))) & 1) == 1;
+
+	/*auto target_piece = target_square.piece;
 	if (target_piece == NULL or (target_piece->color != this->color)) {
 		// need to check wether the move will put your own king in check
 		if (game.with_check) {
@@ -383,13 +441,14 @@ bool Piece::base_can_move_to(Square& target_square) {
 		}
 	}
 	else
-		return false;
+		return false;*/
 }
 
 bool Piece::base_do_control(Square& target_square) { return false; }
 
 move_data Piece::move_to(Square& square) {
 	move_data data;
+
 	data.set_type_matchup_data(this, square.piece, &square);
 	if (item == NULL or can_move_to(square, ignore_item)) {
 		data = base_move_to(square);
@@ -453,48 +512,19 @@ move_data Piece::base_move_to(Square& target_square) {
 	return data;
 }
 
+
+
 bool Piece::can_move_to(Square& target, Uint64 flags) {
 	Piece* adv = target.piece;
 
 	static bool check_for_is_move_disallowed = true, check_for_is_move_allowed = true;
 	static bool check_for_antichess = true;
 
+
 	if (adv != NULL and adv->Class == Duck::cls)
 		return false;
 
-	if (board.in_bonus_move and board.last_move_data.attacker != this)
-		return false; // when you are allowed to play twice or more, you can only move the same piece
-
-	if ((flags & ignore_honey) == 0 and type == bug and not IS_SAFETY_GOOGLES(item) and not HOLDS_HONEY(adv)) {
-		for (Square& square : board) {
-			if (can_move_to(square, flags | ignore_honey)) {
-				if (HOLDS_HONEY(square.piece)) {
-					// congratulation, you are a bug type that can reach opposing honey
-					return false;
-				}
-			}
-		}
-	}
 	bool base = base_can_move_to(target);
-
-	if (game.with_antichess and check_for_antichess and target.piece == NULL and (Class != Pawn::cls or not dynamic_cast<Pawn*>(this)->can_en_passant(target))) {
-		check_for_antichess = false;
-
-		for (Square& s1 : board) {
-			Piece* piece = s1.piece;
-			if (piece != NULL and piece->color == color) {
-				for (Square& s2 : board) {
-					if (s2.piece != NULL and piece->can_move_to(s2)) {
-						check_for_antichess = true;
-						return false;
-					}
-				}
-			}
-		}
-
-		check_for_antichess = true;
-	}
-
 
 	if (item != NULL and (flags & ignore_item) == 0) {
 		if (base) {
@@ -513,6 +543,42 @@ bool Piece::can_move_to(Square& target, Uint64 flags) {
 		}
 	}
 
+	if (not base)
+		return false;
+
+	if ((flags & ignore_honey) == 0 and type == bug and not IS_SAFETY_GOOGLES(item) and not HOLDS_HONEY(adv)) {
+		for (Square& square : board) {
+			if (can_move_to(square, flags | ignore_honey)) {
+				if (HOLDS_HONEY(square.piece)) {
+					// congratulation, you are a bug type that can reach opposing honey
+					return false;
+				}
+			}
+		}
+	}
+	
+
+	if (game.with_antichess and check_for_antichess and not board.in_bonus_move and target.piece == NULL and (Class != Pawn::cls or not dynacast<Pawn>(this)->can_en_passant(target))) {
+		check_for_antichess = false;
+
+		for (Square& s1 : board) {
+			Piece* piece = s1.piece;
+			if (piece != NULL and piece->color == color) {
+				for (Square& s2 : board) {
+					if (s2.piece != NULL and piece->can_move_to(s2)) {
+						check_for_antichess = true;
+						return false;
+					}
+				}
+			}
+		}
+
+		check_for_antichess = true;
+	}
+
+
+	
+
 	return base;
 }
 
@@ -523,6 +589,7 @@ bool Piece::do_control(Square& target) {
 
 
 Piece::~Piece() {
+
 }
 #define useless0 1
 #define useless1 useless0 + useless0 + useless0 + useless0 + useless0 + useless0 + useless0 + useless0 + useless0
@@ -542,19 +609,34 @@ King::~King() {
 	}
 }
 
-auto King::base_can_move_to(Square& target) -> bool {
-	constexpr bool base_rule = true;
-	bool base_movement = (Piece::base_can_move_to(target) and ABS_INT(x - target.x) <= 1 and ABS_INT(y - target.y) <= 1) or can_castle(target, base_rule);
-	if (base_rule)
-		return base_movement;
-	else {
-		if (base_movement) {
-			return item == NULL or not item->is_move_disallowed(target);
-		}
-		else {
-			return item != NULL and item->is_move_allowed(target);
-		}
+void King::set_reachable() {
+	reachable_square = 0;
+	short const X = x;
+	short const Y = y;
+
+	Uint64 const ham = ((X > 0) << 2) | (X < 7);
+	Uint64 const bread = ham | 0b010;
+
+	if (Y < 7) {
+		reachable_square |= bread << (X - 1 + ((Y + 1) << 3));
 	}
+
+	reachable_square |= ham << (X - 1 + (Y << 3));
+
+	if (Y > 0) {
+		reachable_square |= bread << (X - 1 + ((Y - 1) << 3));
+	}
+
+	if (not has_already_move) {
+		if (X <= 6 and can_castle(board[X + 2][Y]))
+			reachable_square |= 1ull << (X + (Y << 3) + 2);
+		else if (X >= 2 and can_castle(board[X - 2][Y]))
+			reachable_square |= 1ull << (X + (Y << 3) + 2);
+	}
+}
+
+auto King::base_can_move_to(Square& target) -> bool {
+	return (Piece::base_can_move_to(target) and ABS_INT(x - target.x) <= 1 and ABS_INT(y - target.y) <= 1) or can_castle(target, true);
 }
 
 auto King::base_move_to(Square& target_square) -> move_data {
@@ -564,7 +646,8 @@ auto King::base_move_to(Square& target_square) -> move_data {
 		data.was_in_check = is_in_check();
 
 		if (not data.cancel) {
-			castle(target_square);
+			castle(target_square, &data.target_square);
+			data.crit_rate = 1237;
 			data.castling = true;
 		}
 		data.escaped_check = data.was_in_check and not is_in_check();
@@ -576,6 +659,36 @@ auto King::base_move_to(Square& target_square) -> move_data {
 	}
 	else
 		return Piece::base_move_to(target_square);
+}
+
+auto King::castle(Square& target_square, Square** rook_pos) -> void { // assume King::can_castle(target_square) is true
+	Piece* rook;
+	int dx = target_square.x - x;
+	int x_step = (dx > 0) ? 1 : -1;
+	if (target_square.piece == NULL) {
+		// first the program find the rook the king is castling with
+
+		int x_temp = x + x_step;
+
+		while (board[x_temp][y].piece == NULL)
+			x_temp += x_step;
+		rook = board[x_temp][y].piece;
+	}
+	else {
+		rook = target_square.piece; // this assumes the piece is a rook as King::can_castle(target_square) is suppose as true
+	}
+	*rook_pos = rook->square;
+
+	square->remove(); // removes the king from its previous position
+	board[x + 2 * x_step][y].piece = this; // moves the king to the corresponding square
+	square = &board[x + 2 * x_step][y];// updates the king position
+
+	rook->square->remove(); // removes the rook from it's previous position
+	board[x - x_step][y].piece = rook; // moves the rook to the corresponding square
+	rook->square = &board[x - x_step][y]; // updates the position of the rook
+
+	has_already_move = true;
+	rook->has_already_move = true;
 }
 
 auto King::base_do_control(Square& target_square) -> bool {
@@ -590,6 +703,44 @@ Pawn::Pawn(Board& board_, piece_color color, Square* sq, typing type_, PokeItem*
 
 inline bool Pawn::base_do_control(Square& square) {
 	return (square.y - y) == ((color == white) ? 1 : -1) and ABS_INT(square.x - x) == 1;
+}
+
+void Pawn::set_reachable() {
+	reachable_square = 0;
+	int const direction = color == white ? 1 : -1;
+
+	short X = x, Y = y + direction;
+
+	if (Y < 0 or Y >= 8)
+		return;
+
+	Piece* p;
+	Square* s;
+	if (X > 0) {
+		s = &board[X - 1][Y];
+		p = s->piece;
+		if (p != NULL or light_en_passant_check(X - 1, Y))
+			reachable_square |= (1ull << (X - 1 + (Y << 3)));
+	}
+	
+	if (X < 7) {
+		s = &board[X + 1][Y];
+		p = s->piece;
+		if (p != NULL or light_en_passant_check(X + 1, Y))
+			reachable_square |= (1ull << (X + 1 + (Y << 3)));
+	}
+
+	p = board[X][Y].piece;
+	if (p == NULL) {
+		reachable_square |= (1ull << (X + (Y << 3)));
+		if (not has_already_move) {
+			Y += direction;
+			p = board[X][Y].piece;
+			if (p == NULL) {
+				reachable_square |= (1ull << (X + (Y << 3)));
+			}
+		}
+	}
 }
 
 bool Pawn::base_can_move_to(Square& target_square) {
@@ -626,9 +777,6 @@ bool Pawn::can_double_step(Square& target, bool base_rule) {
 	int direction = ((color == white) ? 1 : -1);
 	int dy = target.y - y;
 	int dx = target.x - x;
-	PRINT_VAR(dx);
-	PRINT_VAR(dy);
-	PRINT_VAR(has_already_move);
 	return 
 		(dx == 0) and 
 		(dy == 2 * direction) and 
@@ -638,7 +786,23 @@ bool Pawn::can_double_step(Square& target, bool base_rule) {
 	;
 }
 
+bool Pawn::light_en_passant_check(short X, short Y) {
+	move_data const last_move_data = board.get_last_nonduck_move();
+
+	if (last_move_data.attacker == NULL or
+		last_move_data.cancel or
+		last_move_data.attacker->color == color or
+		last_move_data.attacker->Class != Pawn::cls)
+		return false;
+
+	if (board[X][y].piece != last_move_data.attacker) {
+		return false;
+	}
+	return ABS_INT(last_move_data.target_square->y - last_move_data.begin_square->y) == 2;
+}
+
 auto Pawn::can_en_passant(Square& target_square, bool base_rule) -> bool {
+	PRINT_VAR(&board);
 	move_data const last_move_data = board.get_last_nonduck_move();
 
 	if (last_move_data.attacker == NULL or
@@ -683,8 +847,7 @@ auto Pawn::can_en_passant(Square& target_square, bool base_rule) -> bool {
 	}
 	else {
 		return true;
-	}
-		
+	}	
 }
 
 auto Pawn::base_move_to(Square& target_square) -> move_data {
@@ -749,6 +912,28 @@ auto Knight::base_do_control(Square& target_square) -> bool {
 	return dx * dx + dy * dy == 5;
 }
 
+void Knight::set_reachable() {
+	reachable_square = 0;
+	short const X = x, const Y = y;
+	
+	Uint64 const small = (X <= 6) << 2ull | (X >= 1);
+	Uint64 const large = (X <= 5) << 4ull | (X >= 2);
+
+	if (Y < 7) {
+		reachable_square |= large << (X - 2 + ((Y + 1) << 3));
+		if (Y < 6) {
+			reachable_square |= small << (X - 1 + ((Y + 2) << 3));
+		}
+	}
+
+	if (Y > 0) {
+		reachable_square |= large << (X - 2 + ((Y - 1) << 3));
+		if (Y > 1) {
+			reachable_square |= small << (X - 1 + ((Y - 2) << 3));
+		}
+	}
+}
+
 auto Knight::base_can_move_to(Square& target_square) -> bool {
 	return Piece::base_can_move_to(target_square) and base_do_control(target_square);
 }
@@ -758,6 +943,54 @@ Rook::Rook(Board& board_, piece_color color_, Square* sq, typing type_, PokeItem
 
 auto Rook::base_can_move_to(Square& target_square) -> bool {
 	return Piece::base_can_move_to(target_square) and base_do_control(target_square);
+}
+
+void Rook::set_reachable() {
+	reachable_square = 0;
+	
+	short X = x - 1, Y = y;
+
+	while (X >= 0 and board[X][Y].piece == NULL) {
+		reachable_square |= 1ull << (X + (Y << 3));
+		X--;
+	}
+
+	if (X >= 0) {
+		reachable_square |= 1ull << (X + (Y << 3));
+	}
+
+	X = x + 1, Y = y;
+
+	while (X < 8 and board[X][Y].piece == NULL) {
+		reachable_square |= 1ull << (X + (Y << 3));
+		X++;
+	}
+
+	if (X < 8) {
+		reachable_square |= 1ull << (X + (Y << 3));
+	}
+
+	X = x, Y = y - 1;
+
+	while (Y >= 0 and board[X][Y].piece == NULL) {
+		reachable_square |= 1ull << (X + (Y << 3));
+		Y--;
+	}
+
+	if (Y >= 0) {
+		reachable_square |= 1ull << (X + (Y << 3));
+	}
+
+	X = x, Y = y + 1;
+
+	while (Y < 8 and board[X][Y].piece == NULL) {
+		reachable_square |= 1ull << (X + (Y << 3));
+		Y++;
+	}
+
+	if (Y < 8) {
+		reachable_square |= 1ull << (X + (Y << 3));
+	}
 }
 
 auto Rook::base_do_control(Square& target_square) -> bool {
@@ -818,6 +1051,57 @@ auto Bishop::base_do_control(Square& target_square) -> bool{
 	}
 }	
 
+void Bishop::set_reachable() {
+	reachable_square = 0;
+
+	short X = x - 1, Y = y - 1;
+
+	while (X >= 0 and Y >= 0 and board[X][Y].piece == NULL) {
+		reachable_square |= 1ull << (X + (Y << 3));
+		X--;
+		Y--;
+	}
+
+	if (X >= 0 and Y >= 0) {
+		reachable_square |= 1ull << (X + (Y << 3));
+	}
+
+	X = x + 1, Y = y + 1;
+
+	while (X < 8 and Y < 8 and board[X][Y].piece == NULL) {
+		reachable_square |= 1ull << (X + (Y << 3));
+		X++;
+		Y++;
+	}
+
+	if (X < 8 and Y < 8) {
+		reachable_square |= 1ull << (X + (Y << 3));
+	}
+
+	X = x + 1, Y = y - 1;
+
+	while (X < 8 and Y >= 0 and board[X][Y].piece == NULL) {
+		reachable_square |= 1ull << (X + (Y << 3));
+		X++;
+		Y--;
+	}
+
+	if (X < 8 and Y >= 0) {
+		reachable_square |= 1ull << (X + (Y << 3));
+	}
+
+	X = x - 1, Y = y + 1;
+
+	while (X >= 0 and Y < 8 and board[X][Y].piece == NULL) {
+		reachable_square |= 1ull << (X + (Y << 3));
+		X--;
+		Y++;
+	}
+
+	if (X >= 0 and Y < 8) {
+		reachable_square |= 1ull << (X + (Y << 3));
+	}
+}
 
 
 auto Bishop::base_can_move_to(Square& target_square) -> bool {
@@ -827,6 +1111,13 @@ auto Bishop::base_can_move_to(Square& target_square) -> bool {
 Queen::Queen(Board& board_, piece_color color_, Square* sq, typing type_, PokeItem* item) :
 	Bishop(board_, color_, sq, type_, item), Rook(board_, color_, sq, type_, item), Piece(board_, Queen::cls, color_, sq, type_, item)
 {
+}
+
+void Queen::set_reachable() {
+	Rook::set_reachable();
+	Uint64 save = reachable_square;
+	Bishop::set_reachable();
+	reachable_square |= save;
 }
 
 auto inline Queen::base_do_control(Square& target_square) -> bool {
@@ -886,34 +1177,7 @@ auto King::can_castle(Square& target_square, bool base_rule) -> bool {
 		return false; // cannot castle onto another piece
 }
 
-auto King::castle(Square& target_square) -> void { // assume King::can_castle(target_square) is true
-	Piece* rook;
-	int dx = target_square.x - x;
-	int x_step = (dx > 0) ? 1 : -1;
-	if (target_square.piece == NULL) {
-		// first the program find the rook the king is castling with
-		
-		int x_temp = x + x_step;
 
-		while (board[x_temp][y].piece == NULL)
-			x_temp += x_step;
-		rook = board[x_temp][y].piece;
-	}
-	else {
-		rook = target_square.piece; // this assumes the piece is a rook as King::can_castle(target_square) is suppose as true
-	}
-
-	square->remove(); // removes the king from its previous position
-	board[x + 2 * x_step][y].piece = this; // moves the king to the corresponding square
-	square = &board[x + 2 * x_step][y];// updates the king position
-
-	rook->square->remove(); // removes the rook from it's previous position
-	board[x - x_step][y].piece = rook; // moves the rook to the corresponding square
-	rook->square = &board[x - x_step][y]; // updates the position of the rook
-	
-	has_already_move = true;
-	rook->has_already_move = true;
-}
 
 bool King::is_in_check(bool base_rule) {
 	return square->is_controlled_by(not color);
@@ -935,5 +1199,14 @@ void Duck::resize_sprite() {
 	}
 	else {
 		sprite = psyduck_sprite;
+	}
+}
+
+void Duck::set_reachable() {
+	reachable_square = -1;
+	for (Square const& s : board) {
+		if (s.piece != NULL) {
+			reachable_square |= 1ull << (s.x + (s.y << 3));
+		}
 	}
 }

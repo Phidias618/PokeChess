@@ -3,6 +3,8 @@
 #define FPS 60
 
 #include <random>
+#include <list>
+#include <set>
 
 class Game;
 

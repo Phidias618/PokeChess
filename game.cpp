@@ -70,7 +70,7 @@ void Game::init() {
 	is_type_avaible = 0xFFFFFFFF;
 
 	to_menu();
-	with_check = true;
+	with_check = false;
 	with_RNG = true;
 	with_typing = true;
 	with_items = false;
@@ -103,7 +103,7 @@ void Game::reset() {
 	selected_type = typeless;
 	is_type_avaible = 0xFFFFFFFF;
 
-	with_check = true;
+	with_check = false;
 
 	active_textbox = last_textbox = NULL;
 
@@ -118,6 +118,7 @@ void Game::select_piece(Piece* piece) {
 		return;
 	if (piece->item != NULL)
 		piece->item->select_holder();
+	PRINT_DEBUG(type_str_cap[0][piece->base_type]);
 
 	for (Square& square : board) {
 		if (piece->can_move_to(square)) {
@@ -177,18 +178,13 @@ void Game::move_selected_piece_to(Square& square) {
 	if (current_music == promotion_end_music)
 		resume_background();
 
-	piece_color player = board.active_player;
-	Square* begin_square = selected_piece->square;
-
-	board.last_move_data = selected_piece->move_to(square);
-
-	// Square* temp = board.last_move_begin_square;
-	// board.last_move_begin_square = begin_square;
-
-	// temp = board.last_move_end_square;
-	// board.last_move_end_square = selected_piece->square;
-
+	Piece* piece = selected_piece;
 	unselect_piece();
+
+	piece_color player = board.active_player;
+	Square* begin_square = piece->square;
+
+	board.last_move_data = piece->move_to(square);
 
 	if (not board.last_move_data.interrupt_move)
 		resume_move();
@@ -203,6 +199,7 @@ void Game::move_selected_piece_to(Square& square) {
 void Game::resume_move() {
 	move_data& data = board.last_move_data;
 	piece_color player = board.last_move_data.attacker->color;
+
 
 	if (with_typing) {
 		if (data.defender != NULL)
@@ -259,17 +256,16 @@ void Game::resume_move() {
 		}
 	}
 
-	if (data.attacker_item_slot != 0 and not HOLDS_SAFETY_GOOGLES(data.defender)) {
+	if (data.attacker->item != NULL and not HOLDS_SAFETY_GOOGLES(data.defender)) {
 		data.attacker->item->add_cosmetic(data);
 	}
 
-	if (data.defenser_item_slot != 0 and not IS_PROTECTIVE_PADS(data.attacker->item)) {
+	if (data.defender != NULL and data.defender->item != NULL and not IS_PROTECTIVE_PADS(data.attacker->item)) {
 		data.defender->item->add_cosmetic(data);
 	}
 
 	if (data.move_again) {
 		board.in_bonus_move = true;
-		select_piece(data.attacker);
 		if (with_typing) {
 			if (data.was_in_check)
 				resume_background();
@@ -291,10 +287,16 @@ void Game::resume_move() {
 
 	board.turn_number++;
 	board.move_historic.push_front(data);
+
+	board.set_reachable();
+
+	if (data.move_again) {
+		select_piece(data.attacker->square->piece);
+	}
 }
 
 void Game::change_turn() {
-	move_data& data = board.last_move_data;
+	move_data const& data = board.last_move_data;
 	if (with_duck_chess) {
 		if (board.active_player == no_color) {
 			board.first_turn = false;
@@ -530,6 +532,9 @@ void Game::to_promotion(Piece* promoting_pawn) {
 		interupt_background(promotion_music, -1);
 
 	buttons->clear();
+
+	PRINT_DEBUG(type_str_cap[0][promoting_pawn->base_type]);
+
 	if (promoting_pawn->item == NULL or not promoting_pawn->item->prepare_promotion()) {
 		buttons->add(new PromotionButton(Queen::cls->base_promotion_constructor, 7.0, 5.5));
 		buttons->add(new PromotionButton(Rook::cls->base_promotion_constructor, 8.0, 5.5));
@@ -566,9 +571,7 @@ void Game::interupt_background(Mix_Music* music, int loop) {
 }
 
 void Game::resume_background() {
-	PRINT_DEBUG("resume");
 	if (interupted_music == NULL) {
-		PRINT_DEBUG("pas de musique a reprendre");
 		stop_background(0);
 	}
 	else
@@ -577,7 +580,6 @@ void Game::resume_background() {
 			Mix_FadeOutMusic(2000);
 		}
 		else {
-			PRINT_VAR(interupted_music->infinitely);
 			Mix_PlayMusic(interupted_music->music, (interupted_music->infinitely == 1)?-1:1);
 			Mix_SetMusicPosition(interupted_music->interupt_time);
 			if (interupted_music->infinitely)

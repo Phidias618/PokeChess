@@ -131,7 +131,7 @@ public:
 	virtual void revenge(move_data& data) {}
 
 	// called when getting the sprites for the promotion selection (on dummy pieces) and after promoting
-	virtual void promote() {}
+	virtual void promote(Piece* new_holder) {}
 	// returns true to indicate the item will handle part of the promotion process (such as the creation of buttons to promote any piece)
 	// do whatever you want to the promotion process in this method
 	virtual bool prepare_promotion() { return false; }

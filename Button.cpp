@@ -71,8 +71,6 @@ void ButtonCollection::draw() {
 #endif
 	for (Node* current = first; current != NULL; current = tmp) {
 		tmp = current->next;
-		if (game.state == end_of_game)
-			PRINT_VAR(current->button);
 		if (current->button->is_active()) {
 			if (not current->button->currently_active) {
 				current->button->currently_active = true;
@@ -126,7 +124,6 @@ bool ButtonCollection::click(int mouse_button, double x, double y) {
 }
 
 void Button::kill() {
-	PRINT_DEBUG("kill ", this);
 	if (this == Button::pressed_button) {
 		Button::pressed_button = NULL;
 	}
@@ -268,11 +265,14 @@ void PromotionButton::resize() {
 void PromotionButton::activate() {
 	Piece* piece = game.promoting_piece;
 	Piece* temp = piece_constructor(game.board, piece->color, piece->square, piece->type, piece->item);
+	PRINT_DEBUG(type_str_cap[0][piece->base_type]);
+
 	if (temp->item != NULL) {
-		temp->item->holder = temp;
-		temp->item->promote();
+		temp->item->promote(temp);
 		piece->item->holder = piece;
 	}
+	PRINT_DEBUG(type_str_cap[0][piece->base_type]);
+
 	sprite = temp->sprite;
 	delete temp;
 }
@@ -292,12 +292,9 @@ void PromotionButton::effect(int mouse_button, double, double) {
 	square->piece = piece_constructor(game.board, piece->color, square, piece->type, piece->item);
 
 	if (square->piece->item) {
-		square->piece->item->holder = square->piece;
-		square->piece->item->promote();
+		square->piece->item->promote(piece);
 	}
-	delete piece;
 
-	game.board.last_move_data.attacker = square->piece;
 	game.promoting_piece = NULL;
 
 	game.to_game(true);
@@ -519,7 +516,7 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 				list + NB_OF_ITEMS, 
 				[&piece]
 				(const ItemClass* x, const ItemClass* y) -> bool {
-					return x->usefulness_tier(piece) >= y->usefulness_tier(piece); 
+					return x->usefulness_tier(piece) > y->usefulness_tier(piece); 
 				}
 			);
 			for (ItemClass* Item : list) {
@@ -590,7 +587,6 @@ TextBoxDisplay::TextBoxDisplay(const char* text, bool _is_first) : Button(5.0, 0
 	x = 5.0;
 	side = black;
 	y = 2.0;
-	PRINT_VAR(this);
 	strcpy_s(message, text);
 	is_first = _is_first;
 }
@@ -654,7 +650,7 @@ void TextBoxDisplay::draw() {
 
 				Surface char_surface = poke_charset.chop({ (displayed_char % 16) * char_width, (displayed_char / 16) * char_width, char_width, char_width });
 				char_surface.set_colorkey(char_surface.map_rgba(255, 255, 255, 255), true);
-				PRINT_DEBUG(displayed_char);
+				
 				sprite.blit(char_surface, &r, NULL);
 
 				if (displayed_char != '\'')
@@ -689,7 +685,6 @@ void TextBoxDisplay::draw() {
 }
 
 TextBoxDisplay::~TextBoxDisplay() {
-	PRINT_DEBUG("free ", this);
 }
 
 SkipBonusMoveButton::SkipBonusMoveButton(double x_, double y_) : Button(x_ - skip_button->w / 2.0 / TILE_SIZE, y_ - skip_button->h / 2.0 / TILE_SIZE, (double)skip_button->w / TILE_SIZE, (double)skip_button->h / TILE_SIZE) {
@@ -704,6 +699,15 @@ void SkipBonusMoveButton::draw() {
 
 void SkipBonusMoveButton::effect(int mouse_button, double, double) {
 	game.board.in_bonus_move = false;
+
+	move_data data;
+	data.attacker = game.board.last_move_data.attacker;
+	data.begin_square = data.attacker->square;
+	data.target_square = data.attacker->square;
+	data.skip_bonus_turn = true;
+	game.board.move_historic.push_front(data);
+	game.board.set_reachable();
+
 	game.unselect_piece();
 	game.change_turn();
 	game.check_for_end_of_game();
@@ -995,7 +999,6 @@ double clamp(double x, double min, double max) {
 }
 
 void VolumeSlider::hold(int mouse_button, double x_, double) {
-	PRINT_VAR(x_);
 	game.music_volume = (short)(128 * (clamp(x_-2.25, 0.0, 2.5) / 2.5));
 	if (game.with_sounds) {
 		Mix_VolumeMusic(game.music_volume);
@@ -1044,7 +1047,8 @@ void BoardButton::effect(int mouse_button, double x, double y) {
 				if (game.selected_piece != NULL) {
 					game.unselect_piece();
 				}
-				if (piece != NULL && piece->color == game.board.active_player) {
+
+				if (piece != NULL && piece->color == game.board.active_player and (not game.board.in_bonus_move or game.board.last_move_data.target_square == piece->square)) {
 					game.is_holding_something = true;
 					game.selected_thing_sprite_x_offset = (x - tile_x);
 					game.selected_thing_sprite_y_offset = y - (7 - tile_y);
@@ -1228,7 +1232,6 @@ void InformationDisplay::resize() {
 void InformationDisplay::re_draw() {
 	//game.draw_rect(Color::sky, x - 1.2, y - 1.9, 2.45, 4.8);
 	screen.fill(Color::sky);
-	PRINT_VAR((int)(game.language));
 	// game.draw(phone_frame, x, y, center);
 	if (displayed_item != NULL) {
 		int X = (int)(w * TILE_SIZE / 2);
@@ -1720,17 +1723,12 @@ void TeraButton::draw() {
 }
 
 void TeraButton::effect(int, double, double) {
-	if (game.selected_piece->color == white) {
-		game.board.white_tera = false;
-	}
-	else {
-		game.board.black_tera = false;
-	}
+	move_data data;
+	data.set_type_matchup_data(piece, NULL, piece->square);
+
+	
 	game.selected_piece->tera(new_type);
 	game.selected_piece->set_item(NULL);
-	
-
-	move_data data;
 	
 	data.tera = true;
 	data.attacker = game.selected_piece;
@@ -1738,6 +1736,7 @@ void TeraButton::effect(int, double, double) {
 	game.change_turn();
 
 	game.board.move_historic.push_front(data);
+	game.board.set_reachable();
 
 	game.unselect_piece();
 }

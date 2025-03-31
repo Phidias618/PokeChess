@@ -61,11 +61,16 @@ auto Surface::scale_to(int w2, int h2, bool smooth) -> Surface {
 	double w1 = surface->w;
 	double h1 = surface->h;
 
-	Surface result = zoomSurface(surface, (double)w2 / w1, (double)h2 / h1, smooth);
+	Surface result = SDL_CreateSurface(w2, h2, get_format());
 	
 	if (result == NULL) {
 		throw std::exception("rotozoom failed");
 	}
+
+	SDL_SetSurfacePalette(result, SDL_GetSurfacePalette(surface));
+
+	SDL_BlitSurfaceScaled(surface, NULL, result, NULL, smooth ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
+
 
 	return result;
 }
@@ -73,10 +78,15 @@ auto Surface::scale_to(int w2, int h2, bool smooth) -> Surface {
 Surface Surface::scale_by(double factor, bool smooth) {
 	if (surface == NULL)
 		return NULL;
-	Surface result = zoomSurface(surface, factor, factor, smooth);
+	Surface result = SDL_CreateSurface((int)(surface->w * factor), (int)(surface->h * factor), get_format());
 	if (result == NULL) {
 		throw std::exception("rotozoom failed");
 	}
+
+	SDL_SetSurfacePalette(result, SDL_GetSurfacePalette(surface));
+
+
+	SDL_BlitSurfaceScaled(surface, NULL, result, NULL, smooth ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
 
 	return result;
 }

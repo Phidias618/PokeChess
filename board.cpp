@@ -48,12 +48,12 @@ auto Square::to_graveyard() -> void {
 	if (piece != NULL) {
 		switch (piece->color) {
 		case white:
-			PRINT_DEBUG("Un blanc mort, c'est un drame national");
+			// PRINT_DEBUG("Un blanc mort, c'est un drame national");
 			board->white_graveyard[board->white_death] = piece;
 			board->white_death++;
 			break;
 		case black:
-			PRINT_DEBUG("Un noir de mort, bon un de plus un de moins ça change pas grand chose");
+			// PRINT_DEBUG("Un noir de mort, bon un de plus un de moins ça change pas grand chose");
 			board->black_graveyard[board->black_death] = piece;
 			board->black_death++;
 			break;
@@ -123,15 +123,6 @@ auto File::init(Board* b, int x) -> void {
 	}
 }
 
-auto File::operator[](int i) -> Square& {
-	if (0 <= i && i < 8)
-		return data[i];
-	else {
-		PRINT_DEBUG("i:", i);
-		throw std::exception();
-	}
-}
-
 auto File::clear() -> void {
 	for (int i = 0; i < 8; i++) {
 		if (data[i].piece != NULL) {
@@ -173,13 +164,25 @@ void Board::init() {
 	for (unsigned int y = 0; y < 8; y++) {
 		grid[y].init(this, y);
 	}
+
+
 	reset();
 }
 
 auto Board::clear() -> void {
 	turn_number = 0;
 	
+	for (move_data const& move : move_historic) {
+		if (move.promotion) {
+			delete move.attacker;
+		}
+	}
+
 	move_historic.clear();
+	{
+		move_data d;
+		last_move_data = d;
+	}
 
 	File* const end_row_ptr = grid + 8;
 	for (File* row_ptr = grid; row_ptr < end_row_ptr; row_ptr++) {
@@ -231,8 +234,9 @@ void Board::reset() {
 
 	for (unsigned int i = 0; i < 8; i++) {
 		File& file = grid[i];
-		if (layout[i] != NULL)
+		if (layout[i] != NULL) {
 			file[0].piece = (*layout[i])(*this, white, &file[0], typeless, NULL);
+		}
 		file[0].is_accessible = false;
 
 		file[1].piece = new Pawn(*this, white, &file[1], typeless, NULL);
@@ -242,15 +246,154 @@ void Board::reset() {
 		file[6].piece = new Pawn(*this, black, &file[6], typeless, NULL);
 		file[6].is_accessible = false;
 
-		if (layout[i] != NULL)
+		if (layout[i] != NULL) {
 			file[7].piece = (*layout[i])(*this, black, &file[7], typeless, NULL);
+		}
 		file[7].is_accessible = false;
 
 		for (int j = 2; j < 6; j++) {
 			file[j].is_accessible = false;
 		}
 	}
-	
+
+	for (Square const& s : self) {
+		if (s.piece != NULL) {
+			s.piece->set_reachable();
+		}
+	}
+}
+
+
+void Board::cancel_last_move() {
+	if (move_historic.empty() or game.state == in_promotion)
+		return;
+	move_data const data = move_historic.front();
+	move_historic.pop_front();
+	in_bonus_move = false;
+
+	if (not move_historic.empty()) {
+		last_move_data = move_historic.front();
+		if (move_historic.front().move_again) {
+			in_bonus_move = true;
+		}
+	}
+	else {
+		move_data d;
+		last_move_data = d;
+	}
+
+	if (data.skip_bonus_turn) {
+		active_player = data.attacker->color;
+		goto restore_reachable;
+	}
+
+	if (data.was_piece_first_move) {
+		data.attacker->has_already_move = false;
+	}
+
+	if (not data.move_again) {
+		active_player = not active_player;
+	}
+
+	if (data.cancel)
+		goto restore_reachable;
+
+	if (data.attacker->is_in_graveyard) {
+		data.attacker->is_in_graveyard = false;
+		if (data.attacker->color == white)
+			white_death--;
+		else
+			black_death--;
+	}
+
+	if (data.defender != NULL and data.defender->is_in_graveyard) {
+		data.defender->is_in_graveyard = false;
+		if (data.defender->color == white)
+			white_death--;
+		else
+			black_death--;
+	}
+
+	if (get_item_hash(data.attacker->item) != data.attacker_item_hash) {
+		data.attacker->set_item(create_item_from_hash(data.attacker, data.attacker_item_hash));
+	}
+	if (data.defender != NULL and get_item_hash(data.defender->item) != data.defenser_item_hash) {
+		data.defender->set_item(create_item_from_hash(data.defender, data.defenser_item_hash));
+	}
+
+	if (data.en_passant) {
+		data.defender->square->piece = data.defender;
+		
+		data.attacker->square->piece = NULL;
+		data.begin_square->piece = data.attacker;
+		data.attacker->square = data.begin_square;
+	}
+	else if (data.tera) {
+		data.attacker->un_tera();
+	}
+	else if (data.promotion) {
+		PRINT_DEBUG(type_str_cap[0][data.attacker->base_type]);
+		Piece* pawn = data.attacker;
+		Piece* promoted = pawn->square->piece;
+
+		pawn->square = data.begin_square;
+
+		data.begin_square->piece = pawn;
+		data.target_square->piece = data.defender;
+		promoted->item = NULL;
+		delete promoted;
+
+		PRINT_DEBUG(type_str_cap[0][data.attacker->base_type]);
+
+	}
+	else if (data.castling) {
+		
+		if (data.target_square->x < data.attacker->x) {
+			// _ _ K R _ _ _ _ -> R _ _ _ K _ _ _
+
+			data.target_square->piece = self[data.attacker->x + 1][data.attacker->y].piece;
+			self[data.attacker->x + 1][data.attacker->y].piece = NULL;
+
+			data.target_square->piece->square = data.target_square;
+
+			data.begin_square->piece = data.attacker;
+			data.attacker->square->piece = NULL;
+			data.attacker->square = data.begin_square;
+			
+		}
+		else {
+			// _ _ _ _ _ R K _ -> _ _ _ _ K _ _ R
+
+
+			data.target_square->piece = self[data.attacker->x - 1][data.attacker->y].piece;
+			data.target_square->piece->square = data.target_square;
+			self[data.attacker->x - 1][data.attacker->y].piece = NULL;
+
+			data.begin_square->piece = data.attacker;
+			data.attacker->square->piece = NULL;
+			data.attacker->square = data.begin_square;
+		}
+
+		data.target_square->piece->has_already_move = false;
+	}
+	else {
+		
+		if (data.defender != NULL) {
+			data.defender->square->piece = data.defender;
+
+			data.begin_square->piece = data.attacker;
+			data.attacker->square = data.begin_square;
+		}
+		else {
+			data.attacker->square->piece = NULL;
+
+			data.begin_square->piece = data.attacker;
+			data.attacker->square = data.begin_square;
+		}
+	}
+
+restore_reachable:
+	set_reachable();
 }
 
 void Board::resize_surface() {
@@ -268,13 +411,6 @@ void Board::resize_surface() {
 
 }
 
-auto Board::operator[](int i) -> File& {
-	if (0 <= i && i < 8)
-		return grid[i];
-	else
-		throw std::exception();
-}
-
 move_data const Board::get_last_nonduck_move() {
 	for (move_data const move : move_historic) {
 		if (move.attacker->color != no_color)
@@ -289,13 +425,25 @@ bool Board::in_stalemate(piece_color color) {
 		if (begin_square.piece != NULL and begin_square.piece->color == color) {
 			for (Square& target_square : self) {
 				if (begin_square.piece->base_can_move_to(target_square)) {
-					PRINT_DEBUG("piece at (", begin_square.x, ",", begin_square.y, ") can move to (", target_square.x, ",", target_square.y, ")");
+					// PRINT_DEBUG("piece at (", begin_square.x, ",", begin_square.y, ") can move to (", target_square.x, ",", target_square.y, ")");
 					return false;
 				}
 			}
 		}
 	}
 	return true;
+}
+
+void Board::move_piece_to(Piece* piece, Square& target) {
+
+}
+
+void Board::set_reachable() {
+	for (Square const& s : self) {
+		if (s.piece != NULL) {
+			s.piece->set_reachable();
+		}
+	}
 }
 
 Board::~Board() {

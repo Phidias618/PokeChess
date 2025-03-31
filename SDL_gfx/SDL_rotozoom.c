@@ -285,6 +285,7 @@ Assumes dst surface was allocated with the correct dimensions.
 */
 int _zoomSurfaceRGBA(SDL_Surface * src, SDL_Surface * dst, int flipx, int flipy, int smooth)
 {
+	return 0;
 	int x, y, sx, sy, ssx, ssy, *sax, *say, *csax, *csay, *salast, csx, csy, ex, ey, cx, cy, sstep, sstepx, sstepy;
 	tColorRGBA *c00, *c01, *c10, *c11;
 	tColorRGBA *sp, *csp, *dp;
