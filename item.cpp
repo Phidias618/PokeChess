@@ -1452,7 +1452,7 @@ public:
 			res = (dynacast<Pawn>(holder))->can_double_step(target);
 		}
 		else if (holder->Class == King::cls) {
-			res = (dynacast<King>(holder)->can_castle(target));
+			res = (dynacast<King>(holder)->can_castle(target, NULL));
 		}
 		holder->has_already_move = true;
 		return res;
@@ -1834,7 +1834,7 @@ public:
 		else if (holder->Class == King::cls) {
 			King* piece = dynamic_cast<King*>(holder);
 
-			if (piece->can_castle(target)) {
+			if (piece->can_castle(target, NULL)) {
 				return true;
 			}
 		}

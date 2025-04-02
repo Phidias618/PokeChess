@@ -309,9 +309,9 @@ public:
 class King : public virtual Piece {
 	static PieceClass __cls;
 
-	auto can_castle(Square& target_square, bool base_rule=false) -> bool;
+	auto can_castle(Square& target_square, Square** rook_pos) -> bool;
 
-	auto castle(Square& target_square, Square** rook_pos) -> void;
+	auto castle(Square* rook_square) -> void;
 public:
 	static PieceClass* const cls;
 

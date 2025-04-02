@@ -628,26 +628,35 @@ void King::set_reachable() {
 	}
 
 	if (not has_already_move) {
-		if (X <= 6 and can_castle(board[X + 2][Y]))
+		Square* rook_pos;
+		if (X <= 6 and can_castle(board[X + 2][Y], &rook_pos)) {
 			reachable_square |= 1ull << (X + (Y << 3) + 2);
-		else if (X >= 2 and can_castle(board[X - 2][Y]))
-			reachable_square |= 1ull << (X + (Y << 3) + 2);
+			reachable_square |= 1ull << (rook_pos->x + (rook_pos->y << 3));
+		}
+		if (X >= 2 and can_castle(board[X - 2][Y], &rook_pos)) {
+			reachable_square |= 1ull << (X + (Y << 3) - 2);
+			reachable_square |= 1ull << (rook_pos->x + (rook_pos->y << 3));
+		}
 	}
 }
 
 auto King::base_can_move_to(Square& target) -> bool {
-	return (Piece::base_can_move_to(target) and ABS_INT(x - target.x) <= 1 and ABS_INT(y - target.y) <= 1) or can_castle(target, true);
+	return (Piece::base_can_move_to(target) and ABS_INT(x - target.x) <= 1 and ABS_INT(y - target.y) <= 1) or can_castle(target, NULL);
 }
 
 auto King::base_move_to(Square& target_square) -> move_data {
-	if (can_castle(target_square)) {
+	
+	Square* rook_pos;
+	
+	if (can_castle(target_square, &rook_pos)) {
 		move_data data;
 		data.set_type_matchup_data(this, NULL, &target_square);
+		
 		data.was_in_check = is_in_check();
 
 		if (not data.cancel) {
-			castle(target_square, &data.target_square);
-			data.crit_rate = 1237;
+			castle(rook_pos);
+			data.target_square = rook_pos;
 			data.castling = true;
 		}
 		data.escaped_check = data.was_in_check and not is_in_check();
@@ -661,10 +670,19 @@ auto King::base_move_to(Square& target_square) -> move_data {
 		return Piece::base_move_to(target_square);
 }
 
-auto King::castle(Square& target_square, Square** rook_pos) -> void { // assume King::can_castle(target_square) is true
-	Piece* rook;
-	int dx = target_square.x - x;
+// rook_pos must contain a valid Rook to castle with
+auto King::castle(Square* rook_pos) -> void {
+	Piece* rook = rook_pos->piece;
+#if ENABLE_SAFETY_CHECKS
+	if (rook == NULL or rook->Class != Rook::cls) {
+		PRINT_DEBUG("WHO IS THE IDIOT NOT ABLE TO READ THE CONDITION ON King::castle");
+		throw;
+	}
+#endif
+
+	int dx = rook_pos->x - x;
 	int x_step = (dx > 0) ? 1 : -1;
+	/*;
 	if (target_square.piece == NULL) {
 		// first the program find the rook the king is castling with
 
@@ -677,7 +695,7 @@ auto King::castle(Square& target_square, Square** rook_pos) -> void { // assume 
 	else {
 		rook = target_square.piece; // this assumes the piece is a rook as King::can_castle(target_square) is suppose as true
 	}
-	*rook_pos = rook->square;
+	*rook_pos = rook->square;*/
 
 	square->remove(); // removes the king from its previous position
 	board[x + 2 * x_step][y].piece = this; // moves the king to the corresponding square
@@ -1129,7 +1147,7 @@ auto Queen::base_can_move_to(Square& target_square) -> bool {
 }
 
 
-auto King::can_castle(Square& target_square, bool base_rule) -> bool {
+auto King::can_castle(Square& target_square, Square** rook_pos) -> bool {
 	int dx = target_square.x - x;
 
 	if (game.with_antichess)
@@ -1152,8 +1170,11 @@ auto King::can_castle(Square& target_square, bool base_rule) -> bool {
 			Square& intermediate_square = board[x_temp][y];
 			if (intermediate_square.piece != NULL) {
 				Piece* p = intermediate_square.piece;
-				if (p->Class == Rook::cls and p->color == color and not p->has_already_move) // a rook is avaible to castle with
+				if (p->Class == Rook::cls and p->color == color and not p->has_already_move) { // a rook is avaible to castle with
+					if (rook_pos != NULL)
+						*rook_pos = &intermediate_square;
 					return true;
+				}
 				return false; // cannot castle through piece
 			}
 
@@ -1165,6 +1186,10 @@ auto King::can_castle(Square& target_square, bool base_rule) -> bool {
 		return false; // the while loop ended up looking outside of the board
 	}
 	else if (target_square.piece->Class == Rook::cls and target_square.piece->color == color and not target_square.piece->has_already_move) { // check for a castle when you click directly on a rook
+		
+		if (rook_pos != NULL)
+			*rook_pos = &target_square;
+
 		Piece* rook = target_square.piece;
 		for (; x_temp != rook->x; x_temp += x_step) {
 			Square& intermediate_square = board[x_temp][y];
