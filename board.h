@@ -1,64 +1,91 @@
 ﻿#pragma once
 
+
+#include <queue>
+#include <forward_list>
+#include <stack>
+#include <chrono>
+#include <mutex>
+
+#define MOVE_CONTAINER_CAPACITY 256
+
 class Board;
 class File;
-class Square;
+struct Square;
 class BoardIterator;
+struct bot_move_data;
+template<typename T, size_t capacity>
+struct MoveContainer;
+
+#define MAKE_TIMER_LOCK_DUMMY true
+
+#if MAKE_TIMER_LOCK_DUMMY
+// mutex for non critical code that can be disabled when compiling
+struct TimerLock {
+	inline void lock() {}
+	inline void unlock() {}
+	inline bool try_lock() { return true; }
+};
+#else
+using TimerLock = std::mutex;
+#endif
 
 #define self (*this)
 
-#include <forward_list>
-#include <stack>
+
 
 #include "Debugger.h"
 
 #include "SDL+.h"
 
 #include "game.h"
-#include "piece.h"
+#include "item2.h"
+#include "piece2.h"
 
-class Square {
-private:
-	Board* board;
+
+extern TimerLock reachable_lock;
+extern std::chrono::nanoseconds reachable_duration;
+
+extern TimerLock copy_lock;
+extern std::chrono::nanoseconds copy_duration;
+
+extern TimerLock movement_lock;
+extern std::chrono::nanoseconds movement_duration;
+
+extern TimerLock cancel_lock;
+extern std::chrono::nanoseconds cancel_duration;
+
+struct Square {
 public:
-	short const volatile x;
-	short const volatile y;
-
-	bool is_accessible : 1;
-
 	Piece* piece;
 
 	Square();
 
-	Square(Board* b);
-
-	Square(Board* b, int x_, int y_);
-	Square(Board* b, Piece* p, int x_, int y_);
+	Square(Piece* p);
 
 	// return wether a piece from the <color> side can attack this square
-	auto is_controlled_by(piece_color color) -> bool; 
+	bool is_controlled_by(Board&, piece_color color); 
 
 	// move the piece within this square to the graveyard
-	auto to_graveyard() -> void;
+	void to_graveyard(Board&);
 
-	void draw();
+	void draw(Game& game, Board& board, int pos);
 
-	// clear the space while freeing memory
-	auto clear() -> void; 
 
-	// clear the space without freeing memory
-	auto remove() -> void; 
+	inline void clear() {
+		piece = NULL;
+	}
 
 	friend class File;
 };
-
+/*
 class File {
 private:
 	//static Piece *trash;
 	Square data[8];
 	File();
-	File(Board* b, int y_position);
-	auto init(Board* b, int y) -> void;
+	File(int y_position);
+	auto init(int y) -> void;
 
 public:
 
@@ -77,26 +104,29 @@ public:
 	~File();
 
 	friend class Board;
-};
+};*/
+
 
 
 class Board {
 private:
 
-	File grid[8];
+	Square grid[64];
 
+	Piece piece_pool[32];
+	Piece __duck__;
+	Uint8 nb_of_piece = 0;
 public:
-	PieceClass* layout[8];
+	static piece_id layout[8];
+	
+	Uint64 reachable_mask_array[64];
+	// Uint64 item_reachable_mask_array[64];
 
-	std::forward_list<King*> king_list[3];
-	Duck* duck = NULL;
-	short nb_of_kings[3] = { 0, 0, 0 };
+	Piece* duck;
 	
-	short white_death = 0;
-	short black_death = 0;
+	color_array<Sint8> nb_of_death;
 	
-	Piece* white_graveyard[16];
-	Piece* black_graveyard[16];
+	color_array<Piece* [16], true> graveyard;
 	
 	Color light_square_color;
 	Color dark_square_color;
@@ -109,23 +139,65 @@ public:
 	move_data last_move_data;
 	
 	piece_color active_player;
-	double crit_rate;
-	double miss_rate;
+	float crit_rate;
+	float miss_rate;
 
-	bool white_tera : 1 = true;
-	bool black_tera : 1 = true;
+	color_array<bool> is_tera_avaible;
 
 	bool in_bonus_move = false;
 
+	bool end_of_game = false;
+	piece_color winner = no_color;
+
+	Piece* promoting_piece;
+	Uint16 avaible_promotion;
+
+	// some bool that sets the gamerules
+	bool with_typing = true;
+	bool with_items = false;
+	bool with_check = false;
+	bool with_RNG = false;
+	bool with_random_battle = false;
+	bool with_duck_chess = false;
+	bool with_antichess = false;
+	bool with_ability = true;
+	bool with_AG = false;
+	bool with_reversed_typechart = false;
+
 	int turn_number;
 	bool first_turn = true;
+
 	std::list<move_data> move_historic;
+	
+	union {
+		Uint64 presence_mask;
+		Uint64 __first_mask;
+	};
+	
+	color_array<Uint64> color_mask;
+	
+	Uint64 piece_mask[(int)piece_id::__nb_of_id__];
+	Uint64 avaible_en_passant_mask;
+	struct {
+		// allows for type_mask[typeless]
+		Uint64 __typeless_mask;
+		Uint64 type_mask[18];
+	};
+
+	union {
+		Uint64 honey_holder_mask;
+		Uint64 __last_mask;
+	};
+
+
+	Board(Board&);
+	Board& operator=(Board&);
 
 	void resize_surface();
 
-	auto begin() -> BoardIterator;
+	BoardIterator begin();
 
-	auto end() -> BoardIterator;
+	BoardIterator end();
 
 	Surface surface;
 
@@ -141,15 +213,46 @@ public:
 
 	move_data const get_last_nonduck_move();
 
-	void cancel_last_move();
+	void cancel_last_move(bool restore_reachable=true);
 
-	void set_reachable();
+	void set_reachable_squares();
 
-	void move_piece_to(Piece*, Square&);
+	void move_piece_to(Piece*, Sint8);
 
-	inline File& operator[](int i) {
+	void first_half_move(Piece*, Sint8);
+
+	void second_half_move(move_data& first_half_move_data);
+
+	void check_for_end_of_game();
+
+	void promote(piece_id new_id);
+
+	void resume_move();
+
+	void change_turn();
+
+	void skip_bonus_turn();
+
+	void tera_piece(Piece*);
+
+
+	MoveContainer<bot_move_data, MOVE_CONTAINER_CAPACITY> get_avaible_move();
+
+	void execute_move(bot_move_data);
+
+	inline Square& operator[](int i) {
 #if ENABLE_SAFETY_CHECKS
-		if (i < 0 or i >= 8) {
+		if (i < 0 or i >= 64) {
+			PRINT_DEBUG("Out of Bounds board access");
+			throw;
+		}
+#endif
+		return grid[i];
+	}
+
+	inline Square const& operator[](int i) const {
+#if ENABLE_SAFETY_CHECKS
+		if (i < 0 or i >= 64) {
 			PRINT_DEBUG("Out of Bounds board access");
 			throw;
 		}
@@ -197,6 +300,6 @@ public:
 private:
 	Board& iterated_board;
 	int index;
-
-	BoardIterator(Board& board, int index_);
+public:
+	BoardIterator(Board& board, int pos);
 };

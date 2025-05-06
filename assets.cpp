@@ -1,4 +1,6 @@
 #include <cstdio>
+#include <array>
+
 #include <assert.h>
 
 #include "poketyping.h"
@@ -53,6 +55,74 @@ Color type_color[18] = {
 	0xff5a5366,
 	0xff5a8ea1,
 	0xffec8fe6
+};
+
+std::array<sprite_column_type_enum, 43> sprite_column_type = {
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::promotion_no_king_padding,
+	sprite_column_type_enum::promotion_no_king_padding,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::promotion_singleton,
+	sprite_column_type_enum::promotion_singleton,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::promotion_with_king_padding,
+	sprite_column_type_enum::promotion_with_king_padding,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
+
+	sprite_column_type_enum::nothing_special,
+	sprite_column_type_enum::nothing_special,
 };
 
 void* load_all_fonts() {
@@ -202,7 +272,7 @@ Uint64 reverse_endianess(Uint64 val) {
 	return x.t;
 }
 
-constexpr bool is_little_endian() {
+bool is_little_endian() {
 	Uint16 n = 1;
 	return *(Uint8*)&n == 1;
 }
@@ -226,4 +296,4 @@ void* load_ability_array() {
 	return NULL;
 }
 
-void* __ = (void*)((int)load_all_sprites(TILE_SIZE) + (int)load_ability_array());
+// void* __ = (void*)((int)load_all_sprites(TILE_SIZE) + (int)load_ability_array());

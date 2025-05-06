@@ -3,17 +3,18 @@
 #include <cstdint>
 #include <string>
 
-enum class LANGUAGE : long {
+enum class LANGUAGE : int8_t {
 	FRENCH,
 	ENGLISH,
 	GERMAN,
 	SPANISH,
 	ITALIAN,
 	// maybe more later, or not
-	NB_OF_LANGUAGE,
+	__NB_OF_LANGUAGE__,
 };
+#define NB_OF_LANGUAGE ((int)LANGUAGE::__NB_OF_LANGUAGE__)
 
-enum typing : char {
+enum typing : int8_t {
 	typeless=-1,
 	normal,
 	fire,
@@ -35,8 +36,8 @@ enum typing : char {
 	fairy,
 };
 
-extern const char* type_str[(long)LANGUAGE::NB_OF_LANGUAGE][18];
-extern const char* type_str_cap[(long)LANGUAGE::NB_OF_LANGUAGE][18];
+extern const char* type_str[NB_OF_LANGUAGE][18];
+extern const char* type_str_cap[NB_OF_LANGUAGE][18];
 
 
 inline typing& operator++(typing& x) {
@@ -59,25 +60,25 @@ inline typing operator--(typing& x, int) {
 	return old;
 }
 
-enum class pokestat : char {
+enum class pokestat : int8_t {
 	mix = 0,
 	attack = 1,
 	defense = 2,
-	special_attack = 3,
-	special_defense = 4,
+	sp_attack = 3,
+	sp_defense = 4,
 	speed = 5,
 	accuracy = 6,
 	evasion = 7,
 };
 
-enum effectiveness_enum : char {
+enum effectiveness_enum : int8_t {
 	immune = -1,
 	not_very_effective = 0,
 	neutral = 1,
 	super_effective = 2,
 };
 #if false
-const char* defensive_effectiveness_str[(int)LANGUAGE::NB_OF_LANGUAGE][4] = {
+const char* defensive_effectiveness_str[NB_OF_LANGUAGE][4] = {
 	{ // FRENCH
 		"immunitées",
 		"resiste",
@@ -92,7 +93,7 @@ const char* defensive_effectiveness_str[(int)LANGUAGE::NB_OF_LANGUAGE][4] = {
 	}
 };
 
-const char* offensive_effectiveness_str[(int)LANGUAGE::NB_OF_LANGUAGE][4] = {
+const char* offensive_effectiveness_str[NB_OF_LANGUAGE][4] = {
 	{ // FRENCH
 		"inefficace",
 		"resisté",
@@ -110,7 +111,7 @@ const char* offensive_effectiveness_str[(int)LANGUAGE::NB_OF_LANGUAGE][4] = {
 
 struct effectiveness {
 	effectiveness_enum main;
-	int intensity;
+	int8_t intensity;
 	inline effectiveness(effectiveness_enum e) {
 		main = e;
 		intensity = 0;
@@ -149,3 +150,5 @@ inline bool operator==(effectiveness_enum e, const effectiveness x) {
 extern effectiveness_enum const typechart[18][18];
 
 #define iter_typing(var) for (typing var = normal; var <= fairy; var++)
+
+effectiveness get_effectiveness(typing attacking_typing, typing defensing_typing, bool reverse);

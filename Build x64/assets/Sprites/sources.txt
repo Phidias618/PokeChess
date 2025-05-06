@@ -1,9 +1,0 @@
-clink animated: https://www.spriters-resource.com/ds_dsi/pokemonblackwhite/sheet/35189/  thanks to Clowcardruler
-unown_questionmark_animated: https://www.spriters-resource.com/ds_dsi/pokemonblackwhite/sheet/35336/ thanks to Clowcardruler
-piece_sprite_sheet.png: https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces
-boost_arrow.png: https://www.spriters-resource.com/game_boy_advance/pokemonemerald/sheet/19782/
-start_button.png: https://similarpng.com/start-button-icon-isolated-on-transparent-background-png/
-typing_icon.png: https://www.deviantart.com/lugia-sea/art/Pokemon-Type-Icons-Vector-869706864  (probably)
-phone_frame.png: https://www.deviantart.com/unitedworldmedia/art/Rotom-Phone-2-877054359
-
-tera_mosaic.png: https://research.rug.nl/en/publications/acting-individually-or-together-an-investigation-of-childrens-dev

@@ -2,6 +2,8 @@
 #define IN_DEBUG false
 #include <iostream>
 
+
+
 #if IN_DEBUG
 static void PRINT_DEBUG() {
 	std::cout << '\n';
@@ -9,7 +11,7 @@ static void PRINT_DEBUG() {
 
 template<typename T1, typename... Args>
 static inline void PRINT_DEBUG(T1 val, Args... other) {
-	std::cout << val << ' ';
+	std::cout << val;
 	PRINT_DEBUG(other...);
 }
 
@@ -22,7 +24,9 @@ static inline void PRINT_DEBUG(T1 val, Args... other) {
 
 #endif
 
-#define ENABLE_SAFETY_CHECKS true
+#define ENABLE_SAFETY_CHECKS false
 
 #define SHOW_DRAWING_TIME false
 #define SHOW_BUTTON_HITBOX false
+
+#define USE_FIXED_RNG_SEED false

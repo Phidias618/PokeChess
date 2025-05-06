@@ -1,11 +1,15 @@
 #include <iostream>
 #include <cstring>
 
-#include "game.h"
+
 
 #include "SDL+.h"
 
 #include "board.h"
+
+#include "game.h"
+#include "board_eval.h"
+
 
 interupted_music_saver::~interupted_music_saver() {
 	if (previous != NULL)
@@ -20,11 +24,16 @@ Game::Game() : board(*new Board()) {
 	
 }
 
-void Game::init() {
+void Game::init()  {
+#if IN_DEBUG
+	displayed_mask = &board.presence_mask;
+#endif
+
+	// is_a_bot[black] = true;
 	language = LANGUAGE::ENGLISH;
 
 	show_phone = false;
-	phone_displayed_item = NULL;
+	phone_displayed_item = NO_ITEM;
 	phone_displayed_piece = NULL;
 
 	Mix_ReserveChannels(4);
@@ -69,78 +78,67 @@ void Game::init() {
 	selected_type = typeless;
 	is_type_avaible = 0xFFFFFFFF;
 
-	to_menu();
-	with_check = false;
-	with_RNG = true;
-	with_typing = true;
-	with_items = false;
-	with_random_battle = false;
+	board.init();
 
-	winner = no_color;
+	to_menu();
 
 	active_textbox = last_textbox = NULL;
 
 	selected_thing_sprite_x_offset = selected_thing_sprite_y_offset = 0;
 	mouse_x = mouse_y = 0.0;
 
-	board.init();
+	
 }
 
 void Game::reset() {
 	show_phone = false;
-	phone_displayed_item = NULL;
+	phone_displayed_item = NO_ITEM;
 	phone_displayed_piece = NULL;
 	is_holding_something = false;
 	show_type_chart = false;
+
+	accessible_mask = 0;
 
 	std::random_device rand;
 	RNG.seed(rand());
 
 	selected_piece = NULL;
-	winner = no_color;
 
 	nb_of_piece_with_type = 0;
 	selected_type = typeless;
 	is_type_avaible = 0xFFFFFFFF;
-
-	with_check = false;
 
 	active_textbox = last_textbox = NULL;
 
 	board.reset();
 }
 
+#include <chrono>
 
 void Game::select_piece(Piece* piece) {
+	accessible_mask = 0;
+	if (in_board_eval or not piece) {
+		selected_piece = NULL;
+		return;
+	}
+
 	selected_piece = piece;
 
-	if (piece == NULL)
-		return;
-	if (piece->item != NULL)
-		piece->item->select_holder();
-	PRINT_DEBUG(type_str_cap[0][piece->base_type]);
+	accessible_mask = board.reachable_mask_array[piece->pos];
 
-	for (Square& square : board) {
-		if (piece->can_move_to(square)) {
-			square.is_accessible = true;
-		}
-	}
+	piece->item.select_holder(self, board, piece);
 }
 
 void Game::unselect_piece() {
 	if (selected_piece == NULL) 
 		return;
-	if (board.duck != NULL and board.duck->square == NULL)
+	if (board.piece_mask[(int)piece_id::duck] == 0 and board.active_player == no_color)
 		return;
-	int x = selected_piece->x; int y = selected_piece->y;
+
 	selected_piece = NULL;
 	is_holding_something = false;
 
-	for (Square& square : board) {
-		if (square.is_accessible) {
-			square.is_accessible = false;
-		}
-	}
+	accessible_mask = 0;
 }
 
 void Game::draw(Surface surf, double x, double y, anchor c) {
@@ -169,39 +167,78 @@ void Game::draw_rect(Color color, double x, double y, double w, double h) {
 
 }
 
-void Game::move_selected_piece_to(Square& square) {
+void Game::move_selected_piece_to(Sint8 target_pos) {
 	if (active_textbox != NULL) {
 		active_textbox->destroy_all();
 		active_textbox = last_textbox = NULL;
 	}
 
-	if (current_music == promotion_end_music)
+	while (current_music != battle_music) {
 		resume_background();
+	}
 
 	Piece* piece = selected_piece;
-	unselect_piece();
+	selected_piece = NULL;
+	is_holding_something = false;
+	accessible_mask = 0;
+	board.first_half_move(piece, target_pos);
 
-	piece_color player = board.active_player;
-	Square* begin_square = piece->square;
-
-	board.last_move_data = piece->move_to(square);
-
-	if (not board.last_move_data.interrupt_move)
+	if (not board.last_move_data.interrupt_move) {
 		resume_move();
-
-	check_for_end_of_game();
-
-	if (state != end_of_game and board.last_move_data.promotion)
+	}
+	else if (board.last_move_data.init_promotion) {
 		to_promotion(board.last_move_data.attacker);
-
+	}
 }
 
 void Game::resume_move() {
 	move_data& data = board.last_move_data;
-	piece_color player = board.last_move_data.attacker->color;
+	piece_color const player = board.last_move_data.attacker_copy.color;
+	
+	add_move_cosmetics(data);
+
+	board.second_half_move(board.last_move_data);
+
+	Uint64 enemy_mask = board.color_mask[not board.active_player];
+	Uint64 const king_mask = board.piece_mask[(int)piece_id::king] & board.color_mask[board.active_player];
+	
+	bool in_check = false;
+	
+	while (enemy_mask) {
+		int const pos = bsf64(enemy_mask);
+		CLEAR_LOWEST_BIT(enemy_mask);
+
+		if (board.reachable_mask_array[pos] & king_mask) {
+			in_check = true;
+			break;
+		}
+	}
+
+	if (in_check) {
+		interupt_background(check_music, -1);
+	}
 
 
-	if (with_typing) {
+	if (board.end_of_game) {
+		to_end_of_game();
+	}
+	else {
+		if (data.move_again and not is_a_bot[board.active_player]) {
+			select_piece(data.attacker);
+		}
+
+		if (board.with_duck_chess and board.active_player == no_color and board.piece_mask[(int)piece_id::duck] == 0) {
+			selected_piece = board.duck;
+			accessible_mask = ~board.presence_mask;
+		}
+	}
+
+	start_bot_move();
+}
+
+void Game::add_move_cosmetics(move_data& data) {
+
+	if (board.with_typing) {
 		if (data.defender != NULL)
 			if (data.do_crit)
 				;
@@ -215,32 +252,21 @@ void Game::resume_move() {
 		if (data.en_passant)
 			add_textbox("Pawn uses\nEn passant");
 
-		bool is_in_check = false;
-		for (King* king : board.king_list[board.active_player]) {
-			if (king->is_in_check()) {
-				is_in_check = true;
-				break;
-			}
-		}
-		bool escaped_check = board.last_move_data.escaped_check;
-
 		if (data.castling) {
 			add_textbox("King uses castle");
-			if (not escaped_check and not is_in_check) {
-				add_textbox("That raises his\ndefense");
-				global_buttons->add(new StatBoostDisplay(data.attacker, pokestat::defense, TextBoxDisplay::duration, +1));
-			}
+			add_textbox("That raises his\ndefense");
+			global_buttons->add(new StatBoostDisplay(data.attacker, pokestat::defense, TextBoxDisplay::duration, +1));
 		}
 
 		if (data.do_miss) {
 			char buffer[64] = { '\0' };
-			strcpy_s(buffer, data.attacker->Class->name[(int)game.language]);
+			strcpy_s(buffer, data.attacker->get_name(language));
 			strcat_s(buffer, "'s\nattack's missed");
 			add_textbox(buffer);
 		}
 		else if (data.is_immune) {
 			char buffer[64] = "It doesn't affect\n";
-			strcat_s(buffer, data.defender->Class->name[(int)game.language]);
+			strcat_s(buffer, data.defender->get_name(language));
 			add_textbox(buffer);
 		}
 		else if (data.do_crit and not data.do_miss)
@@ -250,132 +276,118 @@ void Game::resume_move() {
 			add_textbox("It's not very\neffective...");
 		else if (data.is_super_effective)
 			add_textbox("It's super\neffective!");
-
+		/*
 		if (escaped_check) {
 			add_textbox("King got away\nsafely");
+		}*/
+	}
+
+	if (data.defender and not data.defender->item.is_safety_google()) {
+		data.attacker->item.add_cosmetic(game, board, data.attacker, data);
+	}
+
+	if (data.defender and not data.attacker->item.is_protective_pads()) {
+		data.defender->item.add_cosmetic(game, board, data.defender, data);
+	}
+}
+
+
+void Game::promote(piece_id promotion_id) {
+	Piece& piece = *board.promoting_piece;
+	move_data interupted_move_data = board.last_move_data;
+	board.promote(promotion_id);
+
+	to_game(true);
+	if (board.with_typing) {
+		char buffer[64] = "Pawn evolved into\n";
+		strcat_s(buffer, piece.get_name(game.language));
+		add_textbox(buffer);
+	}
+
+	add_move_cosmetics(interupted_move_data);
+
+	if (board.with_typing) {
+		interupt_background(promotion_end_music, 0);
+	}
+
+	if (board.end_of_game)
+		to_end_of_game();
+
+	start_bot_move();
+}
+
+void Game::start_bot_move() {
+	if ((not board.end_of_game) and board.active_player != no_color and is_a_bot[board.active_player]) {
+		
+		if (board_eval_thread.joinable()) {
+			interupt_eval = true;
+			board_eval_thread.join();
+			interupt_eval = false;
 		}
-	}
-
-	if (data.attacker->item != NULL and not HOLDS_SAFETY_GOOGLES(data.defender)) {
-		data.attacker->item->add_cosmetic(data);
-	}
-
-	if (data.defender != NULL and data.defender->item != NULL and not IS_PROTECTIVE_PADS(data.attacker->item)) {
-		data.defender->item->add_cosmetic(data);
-	}
-
-	if (data.move_again) {
-		board.in_bonus_move = true;
-		if (with_typing) {
-			if (data.was_in_check)
-				resume_background();
-			else if (current_music != check_music)
-				for (King* king : board.king_list[board.active_player]) {
-					if (king->is_in_check()) {
-						interupt_background(check_music, -1);
-						break;
-					}
-				}
-		}
-	}
-	else {
-		board.in_bonus_move = false;
-		change_turn();
-	}
-	
-	check_for_end_of_game();
-
-	board.turn_number++;
-	board.move_historic.push_front(data);
-
-	board.set_reachable();
-
-	if (data.move_again) {
-		select_piece(data.attacker->square->piece);
+		board_eval_thread = std::thread([this]() -> void { if (multi_threaded_eval) start_threaded_eval(self, board); else start_eval(self, board); });
+		// start_eval(self, board);
+		bot_move_delay = 1 * FPS;
 	}
 }
 
 void Game::change_turn() {
-	move_data const& data = board.last_move_data;
-	if (with_duck_chess) {
-		if (board.active_player == no_color) {
-			board.first_turn = false;
-			board.active_player = not board.move_historic.front().attacker->color;
-			board.duck->sprite = psyduck_sprite;
-		}
-		else {
-			if (board.duck == NULL) {
-				select_piece(new Duck(board, NULL));
-			}
-			else {
-				select_piece(board.duck);
-				board.duck->sprite = psyduck_active_sprite;
-			}
+	// move_data const& data = board.last_move_data;
+	
+	board.change_turn();
 
-			board.active_player = no_color;
-		}
-	}
-	else {
-		board.active_player = not board.active_player;
+	if (board.with_duck_chess and board.active_player == no_color and board.piece_mask[(int)piece_id::duck] == 0) {
+		selected_piece = board.duck;
+		accessible_mask = ~board.presence_mask;
 	}
 
+	start_bot_move();
 
-
-	if (with_typing) {
-		if (data.was_in_check)
-			resume_background();
-		else if (current_music != check_music) {
-			for (King* king : board.king_list[board.active_player]) {
-				if (king->is_in_check()) {
-					interupt_background(check_music, -1);
-					break;
-				}
-			}
-		}
+	if (board.end_of_game) {
+		to_end_of_game();
 	}
 }
 
-void Game::check_for_end_of_game() {
-	if (with_check) {
-		if (board.in_stalemate(board.active_player)) {
-			to_end_of_game();
-			winner = no_color;
-			for (King* king : board.king_list[board.active_player]) {
-				if (king->is_in_check()) {
-					// checkmate congratulations
-					winner = not board.active_player;
-					break;
-				}
+void Game::skip_bonus_turn() {
+	
+	board.skip_bonus_turn();
+	unselect_piece();
+	start_bot_move();
+}
+
+void Game::make_bot_move() {
+	if (bot_move_delay > 0) {
+		bot_move_delay--;
+		return;
+	}
+
+	if (eval_failure) {
+		is_a_bot[white] = is_a_bot[black] = false;
+	}
+
+	if (state == in_game and board.active_player != no_color and is_a_bot[board.active_player] and not in_board_eval) {
+		bot_move_data future = best_move;
+		if (future.promotion) {
+			promote(future.promotion_id);
+		}
+		else if (future.skip_bonus_turn) {
+			board.skip_bonus_turn();
+		}
+		else if (future.tera) {
+			board.tera_piece(board[future.begin_pos].piece);
+		}
+		else {
+			// PRINT_DEBUG("move piece at (", future.begin_square->x, ", ", future.begin_square->y, ") to (", future.target_square->x, ", ", future.target_square->y, ")");
+			if (future.begin_pos >= 0 and future.target_pos >= 0) {
+				select_piece(board[future.begin_pos].piece);
+				move_selected_piece_to(future.target_pos);
 			}
-		}
-	}
-	else if (with_antichess) {
-		if (board.white_death == 16) {
-			winner = white;
-			to_end_of_game();
-		}
-		else if (board.black_death == 16) {
-			winner = black;
-			to_end_of_game();
-		}
-	}
-	else {
-		if (board.nb_of_kings[white] == 0 and board.nb_of_kings[black] == 0) {
-			winner = no_color;
-			to_end_of_game();
-		}
-		else if (board.nb_of_kings[white] == 0) {
-			winner = black;
-			to_end_of_game();
-		}
-		else if (board.nb_of_kings[black] == 0) {
-			winner = white;
-			to_end_of_game();
 		}
 	}
 }
 
 void Game::add_textbox(const char* message) {
+	if (not enable_textbox)
+		return;
 	if (active_textbox == NULL) {
 		active_textbox = last_textbox = new TextBoxDisplay(message, true);
 	}
@@ -394,15 +406,21 @@ void Game::to_menu() {
 	stop_background(100);
 	state = in_menu;
 
+	interupt_eval = true;
+	if (board_eval_thread.joinable()) {
+		board_eval_thread.join();
+	}
+	interupt_eval = false;
+
 	buttons->clear();
 	buttons->add(new BeginGameButton());
-	buttons->add(new ChangeGameruleButton(14.0, 3.0, &with_RNG, pokeball_img, false, 1, 0, "avec de l'Aléatoire", "with RNG"));
-	buttons->add(new ChangeGameruleButton(14.0, 4.0, &with_random_battle, unown_questionmark_animated, true, 16, FPS/8, "Team Aléatoire", "Random Teams"));
-	buttons->add(new ChangeGameruleButton(14.0, 5.0, &with_items, NULL, true, 1, 0, "Objets", "Items"));
-	buttons->add(new ChangeGameruleButton(14.0, 6.0, &with_AG, AG_icon, true, 1, 0, "", "Anything Goes"));
-	buttons->add(new ChangeGameruleButton(14.0, 7.0, &with_antichess, pokeball_img, false, 1, 0, "Anti-echec", "Suicide Cup"));
-	buttons->add(new ChangeGameruleButton(14.0, 8.0, &with_duck_chess, psyduck_sprite, true, 1, 0, "Echec Psykokwak", "Psyduck Chess"));
-	buttons->add(new ChangeGameruleButton(14.0, 9.0, &with_reversed_typechart, NULL, true, 1, 0, "Reverse Battle", "Reverse Battle"));
+	buttons->add(new ChangeGameruleButton(14.0, 3.0, &board.with_RNG, pokeball_img, false, 1, 0, "avec de l'Aléatoire", "with RNG"));
+	buttons->add(new ChangeGameruleButton(14.0, 4.0, &board.with_random_battle, unown_questionmark_animated, true, 16, FPS/8, "Team Aléatoire", "Random Teams"));
+	buttons->add(new ChangeGameruleButton(14.0, 5.0, &board.with_items, NULL, true, 1, 0, "Objets", "Items"));
+	buttons->add(new ChangeGameruleButton(14.0, 6.0, &board.with_AG, AG_icon, true, 1, 0, "", "Anything Goes"));
+	buttons->add(new ChangeGameruleButton(14.0, 7.0, &board.with_antichess, pokeball_img, false, 1, 0, "Anti-echec", "Suicide Cup"));
+	buttons->add(new ChangeGameruleButton(14.0, 8.0, &board.with_duck_chess, psyduck_sprite, true, 1, 0, "Echec Psykokwak", "Psyduck Chess"));
+	buttons->add(new ChangeGameruleButton(14.0, 9.0, &board.with_reversed_typechart, NULL, true, 1, 0, "Reverse Battle", "Reverse Battle"));
 	reset();
 }
 
@@ -411,10 +429,10 @@ void Game::to_menu() {
 void Game::to_selection() {
 	state = in_selection;
 	show_phone = true;
-	phone_displayed_item = NULL;
+	phone_displayed_item = NO_ITEM;
 	phone_displayed_piece = NULL;
 	phone_displayed_type = typeless;
-
+	unavaible_items.clear();
 	buttons->clear();
 	iter_typing(type) {
 		buttons->add(new TypingSelectionButton(14.0 + (type % 3), 3.0 + (type / 3), type));
@@ -424,15 +442,15 @@ void Game::to_selection() {
 	double x = 14.0;
 	double y = 2.5;
 	int i = 0;
-	for (ItemClass& Item : item_table) {
-		if (Item.type == terminator_item)
+	for (PokeItem item : item_table) {
+		if (item.get_id() == item_ID::__terminator_placeholder__)
 			break;
-		if (game.with_RNG or not Item.is_RNG_dependant) {
-			if (Item.type == space_item)
+		if (board.with_RNG or not rng_dependant_items.contains(item)) {
+			if (item.get_id() == item_ID::__space_placeholder__)
 				goto space;
-			else if (Item.type == newline_item)
+			else if (item.get_id() == item_ID::__newline_placeholder__)
 				goto newline;
-			buttons->add(new ItemSelectionButton(x, y, Item));
+			buttons->add(new ItemSelectionButton(x, y, item));
 
 		space:
 			i++;
@@ -455,7 +473,7 @@ void Game::to_selection() {
 	type_selection = true;
 	selected_type = typeless;
 	is_type_avaible = 0xFFFFFFFF;
-	with_check = false;
+	board.with_check = false;
 }
 
 void Game::to_game(bool resume) {
@@ -471,27 +489,30 @@ void Game::to_game(bool resume) {
 
 	RNG.seed(rd());
 
-	if (with_typing) {
+	board.set_reachable_squares();
+
+	if (board.with_typing) {
 		if (resume) {
 			resume_background();
 		}
 		else {
 			play_background(battle_music);
+			// print_perft(board, 6);
 		}
 	}
+
 }
 
 void Game::to_end_of_game() {
 	state = end_of_game;
 	stop_background(1);
+	delete interupted_music;
 	play_background(end_music, -1);
 
 	buttons->clear();
 	buttons->add(new EndOfGameButton());
 
-	for (Square& square : board) {
-		square.is_accessible = false;
-	}
+	accessible_mask = 0;
 }
 
 void Game::to_settings() {
@@ -524,25 +545,31 @@ Piece* constructor(Board& board_, piece_color color_, Square* sq, typing type_ =
 }
 
 void Game::to_promotion(Piece* promoting_pawn) {
-	promoting_piece = promoting_pawn;
+	board.promoting_piece = promoting_pawn;
 	
+	if (not promoting_pawn->item.prepare_promotion(board, promoting_pawn, &board.avaible_promotion)) {
+		board.avaible_promotion = 0b0000'0000'0001'1110;
+	}
+	int count = popcount16(board.avaible_promotion);
+
+	if (count == 0) {
+		board.promoting_piece = NULL;
+		return;
+	}
 	state = in_promotion;
 
-	if (with_typing)
+	if (board.with_typing)
 		interupt_background(promotion_music, -1);
 
 	buttons->clear();
-
-	PRINT_DEBUG(type_str_cap[0][promoting_pawn->base_type]);
-
-	if (promoting_pawn->item == NULL or not promoting_pawn->item->prepare_promotion()) {
-		buttons->add(new PromotionButton(Queen::cls->base_promotion_constructor, 7.0, 5.5));
-		buttons->add(new PromotionButton(Rook::cls->base_promotion_constructor, 8.0, 5.5));
-		buttons->add(new PromotionButton(Bishop::cls->base_promotion_constructor, 9.0, 5.5));
-		buttons->add(new PromotionButton(Knight::cls->base_promotion_constructor, 10.0, 5.5));
-	}
-
 	
+	double X = 9.0 - 0.5 * count;
+	for (int i = 0; i < (8 * sizeof(board.avaible_promotion)); i++) {
+		if ((board.avaible_promotion >> i) & 1) {
+			buttons->add(new PromotionButton((piece_id)i, X, 5.5));
+			X += 1.0;
+		}
+	}
 }
 
 void Game::play_background(Mix_Music* music, int loop) {
@@ -599,6 +626,9 @@ void Game::resume_background() {
 }
 
 Game::~Game() {
+	interupt_eval = true;
+	if (board_eval_thread.joinable())
+		board_eval_thread.join();
 }
 
 Game game = Game();

@@ -6,7 +6,12 @@
 #include <list>
 #include <set>
 
+
+
 class Game;
+
+#include "board.h"
+#include "board_eval.h"
 
 class Textbox;
 
@@ -22,10 +27,11 @@ enum State {
 
 #include "assets.h"
 
-#include "piece.h"
-#include "item.h"
+#include "piece2.h"
+#include "item2.h"
 #include "Button.h"
 #include "board.h"
+
 
 struct interupted_music_saver {
 	Mix_Music* music;
@@ -53,6 +59,23 @@ public:
 	double mouse_x;
 	double mouse_y;
 
+	bool interupt_eval = false;
+	bool in_board_eval = false;
+	int search_depth = 8;
+	bool multi_threaded_eval = true;
+	bool eval_failure = false;
+	std::thread board_eval_thread;
+
+	color_array<bool> is_a_bot;
+
+	int bot_move_delay = 0;
+
+	void make_bot_move();
+
+	void start_bot_move();
+
+	bot_move_data best_move;
+
 	State state;
 	ButtonCollection* global_buttons; // buttons for all or almost all state, they are loaded once at the begining of the game and never unloaded
 	ButtonCollection* buttons; // buttons for the current state, change each time a switch of state occurs
@@ -61,6 +84,9 @@ public:
 	double selected_thing_sprite_x_offset;
 	double selected_thing_sprite_y_offset;
 	Surface selected_thing_sprite;
+
+
+	Uint64 accessible_mask = 0;
 
 	void draw(Surface, double, double, anchor c=top_left);
 	void draw(Surface, double, double, double, double, double, double, anchor c=top_left);
@@ -72,17 +98,24 @@ public:
 			typing selected_type;         // 
 			short nb_of_piece_with_type;  // keeps tracks of the number of piece who were given a type
 			Uint32 is_type_avaible;  // a booleen array that store wether type-th element is still a type avaible
-			ItemClass *selected_item;
+			PokeItem selected_item;
 			bool type_selection;
 		};
 
-		Piece* selected_piece; // data for the state in_game
+		Piece* selected_piece = NULL; // data for the state in_game
 	};
-	
+
+	std::set<PokeItem> unavaible_items;
+
+	bool enable_textbox = true;
 	TextBoxDisplay * active_textbox, * last_textbox;
 
+#if IN_DEBUG
+	Uint64* displayed_mask;
+#endif
+
 	bool show_phone;
-	ItemClass* phone_displayed_item;
+	PokeItem phone_displayed_item;
 	Piece* phone_displayed_piece;
 	typing phone_displayed_type;
 	int phone_displayed_page;
@@ -94,25 +127,8 @@ public:
 
 	Board& board;
 
-	Piece* promoting_piece;
-	piece_color winner;
-
-	// some bool that sets the gamerules
-	bool with_typing = true;
-	bool with_items = false;
-	bool with_check = false;
-	bool with_RNG = false;
-	bool with_random_battle = false;
-	bool with_duck_chess = false;
-	bool with_antichess = false;
-	bool with_ability = true;
-	bool with_AG = false;
-	bool with_reversed_typechart = false;
-
 	bool with_sounds;
 	short music_volume;
-
-	// bool in_check;
 
 	bool show_type_chart;
 
@@ -120,11 +136,13 @@ public:
 
 	void select_piece(Piece* piece);
 	void unselect_piece();
-	void move_selected_piece_to(Square& square);
+	void move_selected_piece_to(Sint8 target_pos);
+	void promote(piece_id promotion_id);
+	void add_move_cosmetics(move_data& data);
 	void change_turn();
 	void resume_move();
 
-	void check_for_end_of_game();
+	void skip_bonus_turn();
 
 	void to_menu();
 	void to_selection();
@@ -154,4 +172,4 @@ public:
 	~Game();
 };
 
-extern Game game;
+// extern Game game;

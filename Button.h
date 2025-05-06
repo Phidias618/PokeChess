@@ -19,6 +19,10 @@ class ChangeGameruleButton;
 #include "assets.h"
 
 #include "game.h"
+#include "item2.h"
+#include "piece2.h"
+
+extern Game game;
 
 class Button {
 private:
@@ -152,11 +156,14 @@ public:
 
 class PromotionButton : public Button {
 private:
-	std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> piece_constructor;
+	piece_id promotion_id;
 	Surface sprite;
 public:
-	PromotionButton(std::function<Piece*(Board&, piece_color, Square*, typing, PokeItem*)>, double x_, double y_);
-
+	inline PromotionButton(piece_id _promotion_id, double x_, double y_) :
+		Button(x_, y_, 1.0, 1.0)
+	{
+		promotion_id = _promotion_id;
+	}
 	virtual void activate();
 
 	virtual void draw();
@@ -188,10 +195,10 @@ public:
 };
 
 class ItemSelectionButton : public Button {
-	ItemClass& Item;
+	PokeItem item;
 	static Surface surface;
 public:
-	ItemSelectionButton(double x, double y, ItemClass&);
+	ItemSelectionButton(double x, double y, PokeItem);
 
 	virtual bool is_active();
 
@@ -366,7 +373,7 @@ public:
 class InformationDisplay : public Button {
 	Piece* displayed_piece;
 	typing displayed_type;
-	ItemClass* displayed_item;
+	PokeItem displayed_item;
 	int displayed_page;
 
 	Surface screen;
@@ -415,7 +422,7 @@ class ChangeGameruleButton : public Button {
 	bool* const gamerule_ptr;
 	Surface const sprite;
 
-	char const* message[(int)LANGUAGE::NB_OF_LANGUAGE];
+	char const* message[NB_OF_LANGUAGE];
 
 	const short animation_length = 1;
 	const short period;

@@ -6,7 +6,7 @@
 This file contains all things that are related to pokemon in pokemon chess
 */
 
-const char* type_str[(long)LANGUAGE::NB_OF_LANGUAGE][18] = {
+const char* type_str[NB_OF_LANGUAGE][18] = {
 	{ // FRENCH
 		"normal",
 		"feu",
@@ -109,7 +109,7 @@ const char* type_str[(long)LANGUAGE::NB_OF_LANGUAGE][18] = {
 	}
 };
 
-const char* type_str_cap[(long)LANGUAGE::NB_OF_LANGUAGE][18] = {
+const char* type_str_cap[NB_OF_LANGUAGE][18] = {
 	{ // FRENCH
 		"Normal",
 		"Feu",
@@ -274,3 +274,22 @@ effectiveness_enum const typechart[18][18] =
 
 #undef NVE
 #undef SE
+
+
+effectiveness get_effectiveness(typing attacking_typing, typing defensing_typing, bool reverse) {
+	effectiveness_enum res;
+	if (attacking_typing == typeless || defensing_typing == typeless) {
+		res = neutral;
+	}
+	else {
+		res = typechart[attacking_typing][defensing_typing];
+	}
+	if (reverse) {
+		if (res <= not_very_effective)
+			res = super_effective;
+		else if (res == super_effective)
+			res = not_very_effective;
+	}
+	
+	return res;
+}

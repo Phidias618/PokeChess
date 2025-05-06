@@ -3,8 +3,19 @@
 extern int TILE_SIZE;
 extern int ITEM_SIZE, ITEM_MINI_SIZE, ITEM_MEGA_SIZE;
 
+#define or ||
+#define and &&
+#define not !
+
+#include <utility>
+#include <thread>
+#include <array>
+
 #include "SDL+.h"
 #include "Debugger.h"
+
+
+#define dstr_t std::pair<char const*, int>
 
 void* load_all_sprites(int tile_size);
 
@@ -66,3 +77,12 @@ extern Mix_Chunk *slash_effect, *stat_increase_effect, *stat_decrease_effect;
 
 extern void* load_all_sounds();
 extern void* load_all_fonts();
+
+
+enum class sprite_column_type_enum {
+	nothing_special, // for most column
+	promotion_singleton, // when the sprite of the promoted piece does not depends of its new nature
+	promotion_no_king_padding, // when the sprite of the promoted piece does depends of its new nature, and there is 2 extra column for a potential king sprite
+	promotion_with_king_padding, // when the sprite of the promoted piece does depends of its new nature, and there is no extra column for a potential king sprite
+};
+extern std::array<sprite_column_type_enum, 43> sprite_column_type;

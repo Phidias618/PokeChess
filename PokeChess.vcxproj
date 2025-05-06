@@ -44,14 +44,16 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>ClangCL</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <EnableASAN>false</EnableASAN>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -131,6 +133,12 @@
       <AdditionalOptions>
       </AdditionalOptions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+      <CallingConvention>Cdecl</CallingConvention>
+      <Optimization>Disabled</Optimization>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <BuildStlModules>true</BuildStlModules>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -153,6 +161,11 @@
       <AdditionalOptions>
       </AdditionalOptions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <CallingConvention>Cdecl</CallingConvention>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <BuildStlModules>true</BuildStlModules>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -165,7 +178,8 @@
     </Link>
     <PreBuildEvent />
     <CustomBuildStep>
-      <Command>-fsanitize=address</Command>
+      <Command>
+      </Command>
     </CustomBuildStep>
     <PreBuildEvent>
       <Command>
@@ -175,28 +189,28 @@
   <ItemGroup>
     <ClCompile Include="assets.cpp" />
     <ClCompile Include="board.cpp" />
+    <ClCompile Include="board_eval.cpp" />
     <ClCompile Include="Button.cpp" />
     <ClCompile Include="game.cpp" />
-    <ClCompile Include="item.cpp" />
+    <ClCompile Include="item2.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="piece.cpp" />
+    <ClCompile Include="piece2.cpp" />
     <ClCompile Include="poketyping.cpp" />
     <ClCompile Include="SDL+.cpp" />
     <ClCompile Include="SDL_gfx/SDL_rotozoom.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="assets.h" />
+    <ClInclude Include="bit_manipulation.h" />
     <ClInclude Include="board.h" />
     <ClInclude Include="BaseButton.h" />
+    <ClInclude Include="board_eval.h" />
     <ClInclude Include="Button.h" />
     <ClInclude Include="Debugger.h" />
     <ClInclude Include="game.h" />
-    <ClInclude Include="item.h" />
-    <ClInclude Include="piece.h" />
+    <ClInclude Include="piece2.h" />
     <ClInclude Include="poketyping.h" />
-    <ClInclude Include="pythonic.h" />
     <ClInclude Include="SDL+.h" />
-    <ClInclude Include="softref.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

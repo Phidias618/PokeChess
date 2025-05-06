@@ -1,19 +1,22 @@
 #include <SDL.h>
 #include <iostream>
 #include <string>
+#include <chrono>
+#include <cstdlib>
 
 #include "SDL+.h"
-
+#define private public
 #include "assets.h"
 
-#include "piece.h"
+#include "piece2.h"
 
 #include "Button.h"
 
 #include "poketyping.h"
+#include "item2.h"
 #include "game.h"
 #include "board.h"
-
+extern Game game;
 
 constexpr Uint64 TPF_ms = 1000 / FPS;
 
@@ -24,7 +27,15 @@ void loop();
 
 int main(int argc, char* args[])
 {	
+
+	init_magic_attack();
+
+	load_all_sprites(TILE_SIZE);
+	load_all_sounds();
+	load_all_sprites(TILE_SIZE);
+
 	game.init();
+
 	if (SDL_plus_init(SDL_INIT_VIDEO | SDL_INIT_AUDIO, IMG_INIT_PNG, MIX_INIT_WAVPACK)) {
 
 		if (game.window == NULL)
@@ -37,8 +48,8 @@ int main(int argc, char* args[])
 			Mix_VolumeMusic(game.music_volume);
 			load_all_sounds();
 			load_all_fonts();
-
 			while (running) {
+				
 				loop();
 			}
 		}
@@ -74,9 +85,9 @@ auto draw_frame() -> void {
 
 	SDL_Rect r(TILE_SIZE * 3, TILE_SIZE * 8, TILE_SIZE, TILE_SIZE);
 	if (game.state != in_settings) {
-		for (int i = 0; i < game.board.white_death; i++) {
+		for (int i = 0; i < game.board.nb_of_death[white]; i++) {
 
-			game.drawing_board.blit(game.board.white_graveyard[i]->sprite, &r, NULL);
+			game.board.graveyard[white][i]->draw(game.board, game.drawing_board, &r);
 			r.x -= TILE_SIZE;
 			if (i % 3 == 2) {
 				r.x += 3 * TILE_SIZE;
@@ -85,8 +96,8 @@ auto draw_frame() -> void {
 		}
 		r.x = 14 * TILE_SIZE;
 		r.y = 3 * TILE_SIZE;
-		for (int i = 0; i < game.board.black_death; i++) {
-			game.drawing_board.blit(game.board.black_graveyard[i]->sprite, &r, NULL);
+		for (int i = 0; i < game.board.nb_of_death[black]; i++) {
+			game.board.graveyard[black][i]->draw(game.board, game.drawing_board, &r);
 			r.x += TILE_SIZE;
 			if (i % 3 == 2) {
 				r.x -= 3 * TILE_SIZE;
@@ -94,8 +105,6 @@ auto draw_frame() -> void {
 			}
 		}
 	}
-
-
 
 	Uint64 t4 = SDL_GetTicks();
 
@@ -189,7 +198,17 @@ void handle_event(SDL_Event e) {
 		if (mbe->button == SDL_BUTTON_RIGHT) {
 
 #if IN_DEBUG
+			if (game.state == end_of_game) {
+				game.to_game(true);
+			}
+			if (game.state == in_promotion) {
+				game.to_game(true);
+			}
 			game.board.cancel_last_move();
+
+			if (game.board.promoting_piece != NULL) {
+				game.to_promotion(game.board.promoting_piece);
+			}
 #endif
 			/*Square* s = game.selected_piece->square;
 			Piece* p = game.selected_piece;
@@ -206,20 +225,6 @@ void handle_event(SDL_Event e) {
 			case in_game: {
 				int tile_x = (int)x; // x_position in tile coordinates,  relative to the bottom left corner
 				int tile_y = 11 - (int)y; // y position in tile coordinates, relative to the bottom left corner
-
-				if ((5 <= tile_x && tile_x < 13) && (2 <= tile_y && tile_y < 10)) {
-					// the click is on the board congratulation
-					Square& selected_square = game.board[tile_x - 5][tile_y - 2];
-					if (selected_square.piece != NULL) {
-						if (false) { // outil de debug pour voir les case controller par une piece
-							for (Square& square : game.board) {
-								if (selected_square.piece->do_control(square)) {
-									square.is_accessible = true;
-								}
-							}
-						}
-					}
-				}
 				break;
 			}
 			}
@@ -250,9 +255,10 @@ void handle_event(SDL_Event e) {
 					game.is_type_avaible |= (1 << game.selected_type);
 					game.selected_type = typeless;
 				}
-				else if (game.selected_item != NULL) {
-					game.selected_item->is_avaible = true;
-					game.selected_item = NULL;
+				else if (game.selected_item) {
+					game.unavaible_items.erase(game.selected_item);
+					game.selected_item = NO_ITEM;
+					game.is_holding_something = false;
 
 				}
 			}
@@ -263,6 +269,26 @@ void handle_event(SDL_Event e) {
 	case SDL_EVENT_KEY_DOWN: {
 		SDL_KeyboardEvent* kbe = (SDL_KeyboardEvent*)&e;
 		switch (kbe->key) {
+#if IN_DEBUG
+		case SDLK_UP:
+			game.displayed_mask += 1024;
+			break;
+		case SDLK_DOWN:
+			game.displayed_mask -= 1024;
+			break;
+		case SDLK_RIGHT:
+			game.displayed_mask++;
+			break;
+			if (game.displayed_mask < &game.board.__last_mask)
+				game.displayed_mask++;
+			break;
+		case SDLK_LEFT:
+			game.displayed_mask--;
+			break;
+			if (game.displayed_mask > &game.board.__first_mask)
+				game.displayed_mask--;
+			break;
+#endif
 		default:
 			break;
 		}
@@ -272,10 +298,11 @@ void handle_event(SDL_Event e) {
 int counter = 0;
 void loop() {
 	Uint64 start_time = SDL_GetTicks();
-
 	// game.add_textbox("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue. Ut in risus volutpat libero pharetra tempor. Cras vestibulum bibendum augue. Praesent egestas leo in pede. Praesent blandit odio eu enim. Pellentesque sed dui ut augue blandit sodales. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aliquam nibh. Mauris ac mauris sed pede pellentesque fermentum. Maecenas adipiscing ante non diam sodales hendrerit.\
 	//	Ut velit mauris, egestas sed, gravida nec, ornare ut, mi.Aenean ut orci vel massa suscipit pulvinar.Nulla sollicitudin.Fusce varius, ligula non tempus aliquam, nunc turpis ullamcorper nibh, in tempus sapien eros vitae ligula.Pellentesque rhoncus nunc et augue.Integer id felis.Curabitur aliquet pellentesque diam.Integer quis metus vitae elit lobortis egestas.Lorem ipsum dolor sit amet, consectetuer adipiscing elit.Morbi vel erat non mauris convallis vehicula.Nulla et sapien.Integer tortor tellus, aliquam faucibus, convallis id, congue eu, quam.Mauris ullamcorper felis vitae erat.Proin feugiat, augue non elementum posuere, metus purus iaculis lectus, et tristique ligula justo vitae magna.\
 	//	Aliquam convallis sollicitudin purus.Praesent aliquam, enim at fermentum mollis, ligula massa adipiscing nisl, ac euismod nibh nisl eu lectus.Fusce vulputate sem at sapien.Vivamus leo.Aliquam euismod libero eu enim.Nulla nec felis sed leo placerat imperdiet.Aenean suscipit nulla in justo.Suspendisse cursus rutrum augue.Nulla tincidunt tincidunt mi.Curabitur iaculis, lorem vel rhoncus faucibus, felis magna fermentum augue, et ultricies lacus lorem varius purus.Curabitur eu amet.");
+	
+	game.make_bot_move();
 
 	float x, y;
 	auto mouse_state = SDL_GetMouseState(&x, &y);

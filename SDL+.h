@@ -112,8 +112,8 @@ public:
 		surface = sdl_surface;
 	}
 
-	inline Surface() {
-		surface = NULL;
+	inline Surface() : surface(NULL) {
+
 	}
 	
 	Surface(const Surface& other) {
@@ -162,8 +162,8 @@ public:
 		return surface->format;
 	}
 
-	inline int blit(Surface source, SDL_Rect* dest, const SDL_Rect* area=NULL, anchor c=top_left) {
-		if (dest != NULL) {
+	inline bool blit(Surface source, SDL_Rect* dest, const SDL_Rect* area=NULL, anchor c=top_left) {
+		if (source.surface != NULL and dest != NULL) {
 			dest->x -= ((area == NULL)? source->w: area->w) * (c & 0b11) / 2;
 			dest->y -= ((area == NULL) ? source->h : area->h) * (c >> 2) / 2;
 		}
@@ -402,7 +402,7 @@ Surface load_img(const char* path) {
 
 class Font {
 private:
-	static const constexpr inline size_t TTF_QUIT_FLAG = (((size_t)1) << (8 * (sizeof size_t) - 1));
+	static const constexpr inline size_t TTF_QUIT_FLAG = (((size_t)1) << (8 * (sizeof(size_t)) - 1));
 	static const constexpr inline size_t REFCOUNT_MASK = ~TTF_QUIT_FLAG;
 	TTF_Font* font;
 	size_t* refcount; // stores wether this font need to call TTF_Quit when deleted in the 64th bit of *ref_count (no pointer is tagged)

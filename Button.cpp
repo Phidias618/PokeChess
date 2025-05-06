@@ -134,7 +134,7 @@ void Button::kill() {
 		if (current->button == this) {
 			if (previous == NULL) {
 				collection->first = current->next;
-				if (collection->first = NULL) {
+				if (collection->first == NULL) {
 					collection->last = NULL;
 				}
 			}
@@ -166,13 +166,13 @@ void BeginGameButton::draw() {
 }
 
 void BeginGameButton::effect(int, double, double) {
-	if (game.with_typing) {
-		if (game.with_random_battle) {
+	if (game.board.with_typing) {
+		if (game.board.with_random_battle) {
 			RandomTypingButton button = RandomTypingButton(0, 0);
 			game.type_selection = true;
 			button.effect(SDL_BUTTON_LEFT, 0, 0);
 			game.type_selection = false;
-			if (game.with_items)
+			if (game.board.with_items)
 				button.effect(SDL_BUTTON_LEFT, 0, 0);
 
 			game.board.active_player = black;
@@ -180,20 +180,21 @@ void BeginGameButton::effect(int, double, double) {
 			game.type_selection = true;
 			button.effect(SDL_BUTTON_LEFT, 0, 0);
 			game.type_selection = false;
-			if (game.with_items)
+			if (game.board.with_items)
 				button.effect(SDL_BUTTON_LEFT, 0, 0);
 			
 			game.board.active_player = white;
+			game.board.with_check = false;
 			game.to_game();
 		}
 		else {
 			game.to_selection();
 		}
-		game.with_check = false;
+		
 	}
 	else {
+		game.board.with_check = true;
 		game.to_game();
-		game.with_check = true;
 	}
 }
 
@@ -202,7 +203,7 @@ EndOfGameButton::EndOfGameButton() : Button(7.5, 5.5, 3.0, 1.0) {
 }
 
 void EndOfGameButton::activate() {
-	switch (game.winner) {
+	switch (game.board.winner) {
 	case white:
 		bg_color = Color::white;
 		txt_color = Color::black;
@@ -252,29 +253,25 @@ void ExitGameButton::effect(int mouse_button, double, double) {
 }
 
 
-PromotionButton::PromotionButton(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem*)> constructor, double tile_x_, double tile_y_) :
-	Button(tile_x_, tile_y_, 1.0, 1.0), piece_constructor(constructor)
+/*PromotionButton::PromotionButton(std::function<Piece* (Board&, piece_color, Square*, typing, PokeItem)> constructor, double x_, double y_) :
+	Button(x_, y_, 1.0, 1.0), piece_constructor(constructor)
 {
 
-}
+}*/
 
 void PromotionButton::resize() {
 	activate();
 }
 
 void PromotionButton::activate() {
-	Piece* piece = game.promoting_piece;
-	Piece* temp = piece_constructor(game.board, piece->color, piece->square, piece->type, piece->item);
-	PRINT_DEBUG(type_str_cap[0][piece->base_type]);
+	Piece piece = *game.board.promoting_piece;
 
-	if (temp->item != NULL) {
-		temp->item->promote(temp);
-		piece->item->holder = piece;
-	}
-	PRINT_DEBUG(type_str_cap[0][piece->base_type]);
+	piece.in_limbo = true;
+	piece.promote(game.board, promotion_id);
 
-	sprite = temp->sprite;
-	delete temp;
+	sprite = Surface::createRGBA(TILE_SIZE, TILE_SIZE);
+	piece.draw(game.board, sprite, NULL);
+
 }
 
 
@@ -286,29 +283,8 @@ void PromotionButton::effect(int mouse_button, double, double) {
 
 	if (mouse_button != SDL_BUTTON_LEFT)
 		return;
-	Piece* piece = game.promoting_piece;
-	Square* square = piece->square;
-	PokeItem* item = piece->item;
-	square->piece = piece_constructor(game.board, piece->color, square, piece->type, piece->item);
-
-	if (square->piece->item) {
-		square->piece->item->promote(piece);
-	}
-
-	game.promoting_piece = NULL;
-
-	game.to_game(true);
-	if (game.with_typing) {
-		char buffer[64] = "Pawn evolved into\n";
-		strcat_s(buffer, square->piece->Class->name[(int)game.language]);
-		game.add_textbox(buffer);
-	}
-
-	game.resume_move();
-
-	if (game.with_typing) {
-		game.interupt_background(promotion_end_music, 0);
-	}
+	if (not game.is_a_bot[game.board.active_player])
+		game.promote(promotion_id);
 }
 
 
@@ -334,7 +310,7 @@ void TypingSelectionButton::effect(int mouse_button, double x_, double y_){
 
 	if ((game.is_type_avaible >> type) & 1) {
 		// the type is still avaible
-		if (not game.with_AG)
+		if (not game.board.with_AG)
 			game.is_type_avaible &= ~(1 << type); // makes the typing no longer avaible
 		game.is_holding_something = true;
 		game.selected_type = type;
@@ -343,18 +319,18 @@ void TypingSelectionButton::effect(int mouse_button, double x_, double y_){
 		game.selected_thing_sprite_x_offset = x_ / 2;
 		game.selected_thing_sprite_y_offset = y_ / 2;
 
-		game.phone_displayed_item = NULL;
+		game.phone_displayed_item = NO_ITEM;
 		game.phone_displayed_piece = NULL;
 		game.phone_displayed_type = type;
 	}
 }
 
-ItemSelectionButton::ItemSelectionButton(double x_, double y_, ItemClass& Item_) : Button(x_, y_, 0.5, 0.5), Item(Item_) {
-	Item.is_avaible = true;
+ItemSelectionButton::ItemSelectionButton(double x_, double y_, PokeItem item_) : Button(x_, y_, 0.5, 0.5), item(item_) {
+
 }
 
 bool ItemSelectionButton::is_active() {
-	return not game.type_selection and Item.is_avaible;
+	return not game.type_selection and not game.unavaible_items.contains(item);
 }
 
 bool ItemSelectionButton::is_on_button(int mouse_button, double x, double y) {
@@ -363,23 +339,23 @@ bool ItemSelectionButton::is_on_button(int mouse_button, double x, double y) {
 
 void ItemSelectionButton::draw() {
 	SDL_Rect rect((int)(x * TILE_SIZE), (int)(y * TILE_SIZE), ITEM_SIZE, ITEM_SIZE);
-	Item.draw(game.drawing_board, &rect);
+	item.draw(game.drawing_board, &rect);
 }
 
 Surface ItemSelectionButton::surface = Surface::createRGBA(ITEM_SIZE, ITEM_SIZE);
 
 void ItemSelectionButton::effect(int mouse_click, double x_, double y_) {
-	if (game.selected_item != NULL) {
-		game.selected_item->is_avaible = true;
+	if (game.selected_item) {
+		game.unavaible_items.erase(game.selected_item);
 		game.is_holding_something = false;
-		game.selected_item = NULL;
+		game.selected_item = NO_ITEM;
 	}
 
 	switch (mouse_click) {
 	case SDL_BUTTON_LEFT:
-		game.selected_item = &Item;
-		if (not game.with_AG)
-			Item.is_avaible = false;
+		game.selected_item = item;
+		if (not game.board.with_AG)
+			game.unavaible_items.insert(item);
 		game.is_holding_something = true;
 		game.selected_thing_sprite_x_offset = x_;
 		game.selected_thing_sprite_y_offset = y_;
@@ -388,21 +364,18 @@ void ItemSelectionButton::effect(int mouse_click, double x_, double y_) {
 		}
 		surface.clear();
 		SDL_Rect rect(0, 0, ITEM_SIZE, ITEM_SIZE);
-		Item.draw(surface, &rect);
+		item.draw(surface, &rect);
 		game.selected_thing_sprite = surface;
 
 		if (game.show_phone) {
-			game.phone_displayed_item = &Item;
+			game.phone_displayed_item = item;
 			game.phone_displayed_piece = NULL;
 		}
 
-		if (Item.description != NULL)
-			std::cout << Item.description << '\n';
+		if (false and item.get_desc(game.language).first != NULL)
+			std::cout << item.get_desc(game.language).first << '\n';
 		break;
 	}
-	
-	
-	
 }
 
 ConfirmSelectionButton::ConfirmSelectionButton(double x_, double y_) : Button(x_, y_, 1.0, 1.0) {}
@@ -423,15 +396,13 @@ void ConfirmSelectionButton::effect(int mouse_button, double, double) {
 	game.is_type_avaible = 0xFFFFFFFF;
 	game.type_selection = true;
 	game.nb_of_piece_with_type = 0;
-	for (ItemClass& item : item_table) {
-		item.is_avaible = true;
-	}
+	game.unavaible_items.clear();
 	
-	game.phone_displayed_item = NULL;
+	game.phone_displayed_item = NO_ITEM;
 	game.phone_displayed_type = typeless;
 	game.phone_displayed_piece = NULL;
 
-	if ((game.board.active_player = not game.board.active_player) == white){
+	if ((game.board.active_player = -game.board.active_player) == white){
 		game.to_game();
 	}
 }
@@ -456,7 +427,11 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 	game.is_type_avaible = 0xFFFFFFFF; // makes all the types avaible again
 
 	std::random_device rd;
+#if USE_FIXED_RNG_SEED
+	std::mt19937 gen(game.board.active_player);
+#else
 	std::mt19937 gen(rd());
+#endif
 
 	if (game.type_selection) {
 		game.selected_type = typeless;
@@ -464,9 +439,9 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 		typing list[18];
 		
 
-		if (game.with_AG) {
+		if (game.board.with_AG) {
 			for (int i = 0; i < 16; i++) {
-				list[i] = (typing)(rd() % 18);
+				list[i] = (typing)(gen() % 18);
 			}
 		}
 		else {
@@ -477,19 +452,19 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 		}
 		if (game.board.active_player == white)
 			for (int i = 0; i < 16; i++) {
-				Square& square = game.board[i % 8][i / 8];
-				if (square.piece != NULL) {
-					square.piece->set_type(list[i]);
-					if (not game.with_AG)
+				Square& square = game.board[i];
+				if (square.piece) {
+					square.piece->set_type(game.board, list[i]);
+					if (not game.board.with_AG)
 						game.is_type_avaible &= ~(1 << list[i]); // makes the type not avaible
 				}
 			}
 		else
 			for (int i = 0; i < 16; i++) {
-				Square& square = game.board[i % 8][i / 8 + 6];
-				if (square.piece != NULL) {
-					square.piece->set_type(list[i]);
-					if (not game.with_AG)
+				Square& square = game.board[i + 48];
+				if (square.piece) {
+					square.piece->set_type(game.board, list[i]);
+					if (not game.board.with_AG)
 						game.is_type_avaible &= ~(1 << list[i]); // makes the type not avaible
 				}
 			}
@@ -497,39 +472,34 @@ void RandomTypingButton::effect(int mouse_button, double, double) {
 		game.nb_of_piece_with_type = 16;
 	}
 	else {
-		int x = 0;
-		int y = (game.board.active_player == white) ? 0 : 6;
+		int pos = (game.board.active_player == white) ? 0 : 48;
 		
 		int j = 16;
-		ItemClass* list[NB_OF_ITEMS];
+		PokeItem list[ITEM_TABLE_LEN];
 		int current = 0;
-		for (ItemClass& Item : item_table) {
-			list[current++] = &Item;
-			Item.is_avaible = true;
+		for (PokeItem item : item_table) {
+			if (item)
+				list[current++] = item;
 		}
-		number_of_drawed_terashard = 0;
+		game.unavaible_items.clear();
+		number_of_drawed_terashard = number_of_drawed_resistance_berry = 0;
 		while (j > 0) {
-			Piece* piece = game.board[x][y].piece;
-			std::shuffle(list, list + NB_OF_ITEMS, gen);
+			Piece* piece = game.board[pos].piece;
+			std::shuffle(list, list + ITEM_TABLE_LEN, gen);
 			std::stable_sort(
 				list, 
-				list + NB_OF_ITEMS, 
+				list + ITEM_TABLE_LEN, 
 				[&piece]
-				(const ItemClass* x, const ItemClass* y) -> bool {
-					return x->usefulness_tier(piece) > y->usefulness_tier(piece); 
+				(PokeItem x, PokeItem y) -> bool {
+					return x.usefulness_tier(game.board, piece) > y.usefulness_tier(game.board, piece); 
 				}
 			);
-			for (ItemClass* Item : list) {
-				if (Item->type == normal_item and (game.with_RNG or not Item->is_RNG_dependant) and Item->is_avaible) {
-					if (not game.with_AG)
-						Item->is_avaible = false;
-					piece->set_item(NULL);
-					piece->set_item((*Item)(piece));
-					x++;
-					if (x == 8) {
-						x = 0;
-						y++;
-					}
+			for (PokeItem item : list) {
+				if (item and (game.board.with_RNG or not rng_dependant_items.contains(item)) and not game.unavaible_items.contains(item)) {
+					if (not game.board.with_AG)
+						game.unavaible_items.insert(item);
+					piece->set_item(game.board, item);
+					pos++;
 					j--;
 					break;
 				}
@@ -544,37 +514,40 @@ SwitchSelectionButton::SwitchSelectionButton(double x_, double y_) : Button(x_, 
 
 void SwitchSelectionButton::draw() {
 	const char* txt = "";
-	switch (game.language) {
-	case LANGUAGE::ENGLISH:
-		txt = (game.type_selection) ? "Types" : "Items";
-		break;
-	case LANGUAGE::FRENCH:
-		txt = (game.type_selection) ? "Types" : "Objets";
-		break;
-	case LANGUAGE::GERMAN:
-		txt = (game.type_selection) ? "Typen" : "Objekte";
-		break;
-	case LANGUAGE::SPANISH:
-		txt = (game.type_selection) ? "Typos" : "Objetos";
-		break;
-	}
+	if (game.board.with_items) {
+		switch (game.language) {
+		case LANGUAGE::ENGLISH:
+			txt = (game.type_selection) ? "Items" : "Types";
+			break;
+		case LANGUAGE::FRENCH:
+			txt = (game.type_selection) ? "Objets" : "Types";
+			break;
+		case LANGUAGE::GERMAN:
+			txt = (game.type_selection) ? "Objekte" : "Typen";
+			break;
+		case LANGUAGE::SPANISH:
+			txt = (game.type_selection) ? "Objetos" : "Typos";
+			break;
+		}
 
-	game.draw(CSM_font_array[TILE_SIZE / 2].render_shaded(txt, Color::black, game.bg_color), x, y);
+		game.draw(CSM_font_array[TILE_SIZE / 2].render_shaded(txt, Color::black, game.bg_color), x, y);
+	}
 }
 
 void SwitchSelectionButton::effect(int, double, double) {
-	if (not game.with_items) {
+	if (not game.board.with_items) {
 		return;
 	}
 	game.type_selection = not game.type_selection;
-	if (game.selected_item != NULL) {
-		game.selected_item->is_avaible = true;
+	if (game.type_selection) {
+		game.unavaible_items.erase(game.selected_item);
 	}
-	else if (game.selected_type != typeless) {
-		game.is_type_avaible |= (1 << game.selected_type);
+	else {
+		if (game.selected_type != typeless) {
+			game.is_type_avaible |= (1 << game.selected_type);
+		}
 	}
 	game.is_holding_something = false;
-
 }
 
 TextBoxDisplay::TextBoxDisplay(const char* text, bool _is_first) : Button(5.0, 0.0, 8.0, textbox_frame->h * 8.0 / textbox_frame->w) {
@@ -597,7 +570,7 @@ bool TextBoxDisplay::is_active() {
 
 void TextBoxDisplay::activate() {
 	move_data const last_move_data = game.board.get_last_nonduck_move();
-	if (last_move_data.begin_square == NULL or last_move_data.begin_square->y > 3) {
+	if (last_move_data.begin_pos > 31) {
 		y = 10;
 		side = white;
 	}
@@ -677,7 +650,7 @@ void TextBoxDisplay::draw() {
 		}
 	}
 
-	SDL_Rect dest = {5 * TILE_SIZE, 2 * TILE_SIZE, 8*TILE_SIZE, sprite->h * (double)8 * TILE_SIZE / sprite->w};
+	SDL_Rect dest = {5 * TILE_SIZE, 2 * TILE_SIZE, 8*TILE_SIZE, (int)(sprite->h * 8. * (double)TILE_SIZE / sprite->w)};
 	if (side == white) {
 		dest.y += 8 * TILE_SIZE - dest.h;
 	}
@@ -691,26 +664,14 @@ SkipBonusMoveButton::SkipBonusMoveButton(double x_, double y_) : Button(x_ - ski
 
 }
 
-bool SkipBonusMoveButton::is_active() { return game.board.in_bonus_move; }
+bool SkipBonusMoveButton::is_active() { return game.board.in_bonus_move and not game.is_a_bot[game.board.active_player]; }
 
 void SkipBonusMoveButton::draw() {
 	game.draw(skip_button, x, y);
 }
 
 void SkipBonusMoveButton::effect(int mouse_button, double, double) {
-	game.board.in_bonus_move = false;
-
-	move_data data;
-	data.attacker = game.board.last_move_data.attacker;
-	data.begin_square = data.attacker->square;
-	data.target_square = data.attacker->square;
-	data.skip_bonus_turn = true;
-	game.board.move_historic.push_front(data);
-	game.board.set_reachable();
-
-	game.unselect_piece();
-	game.change_turn();
-	game.check_for_end_of_game();
+	game.skip_bonus_turn();
 }
 
 StatBoostDisplay::StatBoostDisplay(Piece* boosted_piece, pokestat boosted_stat, int delay_, int boost_or_debuff_) : Button(0.0, 0.0, 0.0, 0.0) {
@@ -746,7 +707,7 @@ void StatBoostDisplay::draw() {
 		}
 	}
 
-	if (delay > 0 or piece == NULL or piece->is_in_graveyard)
+	if (delay > 0 or piece == NULL or piece->is_dead)
 		return;
 
 	Surface surface = game.drawing_board;
@@ -764,8 +725,8 @@ void StatBoostDisplay::draw() {
 	Uint32* pixels = (Uint32*)surface->pixels;
 	//Uint32* begin = &pixels[0];
 
-	Uint32* begin = &pixels[TILE_SIZE * ((7-piece->y) + 2) * surface_pitch/4 + TILE_SIZE * (piece->x + 5)];
-	Uint32* end = &pixels[TILE_SIZE * ((7-piece->y) + 3) * surface_pitch/4 + TILE_SIZE * (piece->x + 5)];
+	Uint32* begin = &pixels[TILE_SIZE * ((7 - (piece->pos >> 3)) + 2) * surface_pitch/4 + TILE_SIZE * ((piece->pos & 0b111) + 5)];
+	Uint32* end = &pixels[TILE_SIZE * ((7 - (piece->pos >> 3)) + 3) * surface_pitch/4 + TILE_SIZE * ((piece->pos & 0b111) + 5)];
 
 	Uint32 bg_color = begin[0];
 
@@ -810,7 +771,7 @@ ShowTypechartButton::ShowTypechartButton(double x_, double y_) : Button(x_, y_, 
 }
 
 bool ShowTypechartButton::is_active() {
-	return game.with_typing and not (game.state == in_settings);
+	return game.board.with_typing and not (game.state == in_settings);
 }
 
 void ShowTypechartButton::resize() {
@@ -1017,42 +978,46 @@ bool BoardButton::is_active() {
 
 void BoardButton::draw() {
 	//game.draw(board.surface, x, y, top_left);
-
+	int pos = 0;
 	for (Square& square : board) {
-		square.draw();
+		square.draw(game, game.board, pos);
+		pos++;
 	}
 }
 
 void BoardButton::effect(int mouse_button, double x, double y) {
 	int tile_x = (int)x;
 	int tile_y = 7 - (int)y;
-
-	Square& selected_square = game.board[tile_x][tile_y];
+	int pos = tile_x | (tile_y << 3);
+	Square& selected_square = game.board[pos];
 	Piece* piece = selected_square.piece;
 	switch (game.state) {
 	case in_game:
-		if (selected_square.is_accessible and game.selected_piece != NULL) {
-			game.move_selected_piece_to(selected_square);
+		if ((game.accessible_mask & get_square_mask(pos)) and game.selected_piece != NULL) {
+			game.move_selected_piece_to(pos);
 		}
 		else {
-			if (game.selected_piece == piece && piece != NULL) {
+			if (game.selected_piece != NULL and game.selected_piece == piece) {
 				is_first_unhold = false;
 				game.is_holding_something = true;
 				game.selected_thing_sprite_x_offset = (x - tile_x);
 				game.selected_thing_sprite_y_offset = y - (7 - tile_y);
-				game.selected_thing_sprite = piece->sprite;
-
+				game.selected_thing_sprite = Surface::createRGBA(TILE_SIZE, TILE_SIZE);
+				piece->draw(game.board, game.selected_thing_sprite, NULL);
 			}
 			else {
 				if (game.selected_piece != NULL) {
 					game.unselect_piece();
 				}
 
-				if (piece != NULL && piece->color == game.board.active_player and (not game.board.in_bonus_move or game.board.last_move_data.target_square == piece->square)) {
-					game.is_holding_something = true;
-					game.selected_thing_sprite_x_offset = (x - tile_x);
-					game.selected_thing_sprite_y_offset = y - (7 - tile_y);
-					game.selected_thing_sprite = piece->sprite;
+				if (piece and piece->color == game.board.active_player and (not game.board.in_bonus_move or (game.board.last_move_data.end_pos == piece->pos))) {
+					if (not game.is_a_bot[piece->color]) {
+						game.is_holding_something = true;
+						game.selected_thing_sprite_x_offset = (x - tile_x);
+						game.selected_thing_sprite_y_offset = y - (7 - tile_y);
+						game.selected_thing_sprite = Surface::createRGBA(TILE_SIZE, TILE_SIZE);
+						piece->draw(game.board, game.selected_thing_sprite, NULL);
+					}
 					game.select_piece(piece);
 				}
 			}
@@ -1060,20 +1025,21 @@ void BoardButton::effect(int mouse_button, double x, double y) {
 			if (piece != NULL) {
 				game.phone_displayed_piece = piece;
 				game.phone_displayed_type = typeless;
-				game.phone_displayed_item = NULL;
+				game.phone_displayed_item = NO_ITEM;
 			}
 		}
 		break;
 	case in_selection:
 		if (game.type_selection) {
-			if (piece != NULL and piece->color == game.board.active_player) {
+			if (piece and piece->color == game.board.active_player) {
 				if (game.selected_type != typeless) {
 					if (piece->type != typeless) {
 						game.is_type_avaible |= (1 << selected_square.piece->type); // add the old type of the piece to the type pool
 						game.nb_of_piece_with_type--;
 					}
 					game.nb_of_piece_with_type++;
-					piece->set_type(game.selected_type);
+					piece->set_type(game.board, game.selected_type);
+					piece->item.sync_with_holder(board, piece);
 					no_unclick = true;
 					game.selected_type = typeless;
 					game.selected_thing_sprite = NULL;
@@ -1088,22 +1054,28 @@ void BoardButton::effect(int mouse_button, double x, double y) {
 		}
 		else {
 			if (piece != NULL and piece->color == game.board.active_player) {
-				if (game.selected_item != NULL) {
-					if (piece->item != NULL) {
-						piece->item->cls.is_avaible = true;
-					}
-					piece->set_item(NULL);
-					piece->set_item((*game.selected_item)(piece));
-					game.selected_item = NULL;
+				PokeItem old_item = piece->item;
+				if (piece->item) {
+					game.unavaible_items.erase(piece->item);
+					piece->item.remove_from_during_selection(board, piece);
+					piece->set_item(board, NO_ITEM);
+				}
+				if (game.selected_item) {
+					piece->set_item(game.board, game.selected_item);
+					game.selected_item.sync_with_holder(board, piece);
+					game.selected_item = NO_ITEM;
 					game.is_holding_something = false;
 					game.selected_thing_sprite = NULL;
 
 					no_unclick = true;
 				}
+				else {
+					ItemSelectionButton(0, 0, old_item).effect(SDL_BUTTON_LEFT, 0.0, 0.0);
+					no_unclick = true;
+				}
 			}
 			else {
-				if (game.selected_item != NULL)
-					game.selected_item->is_avaible = true;
+				game.unavaible_items.erase(game.selected_item);
 				game.is_holding_something = false;
 			}
 		}
@@ -1126,19 +1098,22 @@ void BoardButton::unhold(int mouse_button, double x, double y) {
 		tile_x = (int)x;
 		tile_y = 7 - (int)y;
 	}
+
 	if (tile_x < 0 or tile_x >= 8 or tile_y < 0 or tile_y >= 8) {
 		is_first_unhold = true;
 		return;
 	}
 
-	Square& selected_square = game.board[tile_x][tile_y];
+	int const pos = tile_x | (tile_y << 3);
+
+	Square& selected_square = game.board[pos];
 	Piece* piece = selected_square.piece;
 	switch (game.state) {
 	case in_game:
 		if (game.is_holding_something and game.selected_piece != NULL) {
-			if (selected_square.is_accessible) {
+			if (game.accessible_mask & get_square_mask(pos)) {
 				is_first_unhold = true;
-				game.move_selected_piece_to(selected_square);
+				game.move_selected_piece_to(pos);
 			}
 			else {
 				game.is_holding_something = false;
@@ -1154,31 +1129,31 @@ void BoardButton::unhold(int mouse_button, double x, double y) {
 		break;
 	case in_selection:
 		if (game.type_selection) {
-			if (game.selected_type == typeless and piece != NULL and piece->type != typeless and piece->color == game.board.active_player) {
+			if (game.selected_type == typeless and piece and piece->type != typeless and piece->color == game.board.active_player) {
 				game.selected_type = piece->type;
 				game.is_holding_something = true;
 				game.selected_thing_sprite = typing_icon[game.selected_type].scale_by(0.5, true);
-				piece->set_type(typeless);
+				piece->set_type(game.board, typeless);
 				game.nb_of_piece_with_type--;
 
-				game.phone_displayed_item = NULL;
+				game.phone_displayed_item = NO_ITEM;
 				game.phone_displayed_type = game.selected_type;
 				game.phone_displayed_piece = NULL;
 			}
 		}
 		else {
-			if (game.selected_item == NULL and piece != NULL and piece->item != NULL and piece->color == game.board.active_player) {
-				ItemClass& Item = piece->item->cls;
-				game.selected_item = &Item;
+			if (game.selected_item and piece and piece->color == game.board.active_player) {
+				// ItemClass& Item = piece->item->cls;
+				// game.selected_item = &Item;
 				game.is_holding_something = true;
 
 				Surface square = Surface::createRGBA(ITEM_SIZE, ITEM_SIZE);
-				Item.draw(square);
+				// Item.draw(square);
 				game.selected_thing_sprite = square;
 
-				piece->set_item(NULL);
+				piece->set_item(game.board, NO_ITEM);
 
-				game.phone_displayed_item = &Item;
+				// game.phone_displayed_item = &Item;
 				game.phone_displayed_type = typeless;
 				game.phone_displayed_piece = NULL;
 			}
@@ -1189,10 +1164,10 @@ void BoardButton::unhold(int mouse_button, double x, double y) {
 
 InformationDisplay::InformationDisplay(double x_, double y_) : Button(x_ - 1.25, y_ - 1.6, 2.5, 4.6) {
 	displayed_type = typeless;
-	displayed_item = NULL;
 	displayed_piece = NULL;
 	displayed_page = 0;
 	screen = Surface::createRGB((int)(TILE_SIZE * w), (int)(TILE_SIZE * h));
+	screen.fill(Color::sky);
 	edge = (int)(0.1 * TILE_SIZE);
 	language = LANGUAGE::FRENCH;
 }
@@ -1205,7 +1180,7 @@ InformationDisplay::InformationDisplay(double x_, double y_) : Button(x_ - 1.25,
 }
 
 void InformationDisplay::draw() {
-	if (game.phone_displayed_item != displayed_item 
+	if (game.phone_displayed_item != displayed_item
 		or game.phone_displayed_type != displayed_type 
 		or game.phone_displayed_piece != displayed_piece 
 		or game.phone_displayed_page != displayed_page 
@@ -1233,27 +1208,27 @@ void InformationDisplay::re_draw() {
 	//game.draw_rect(Color::sky, x - 1.2, y - 1.9, 2.45, 4.8);
 	screen.fill(Color::sky);
 	// game.draw(phone_frame, x, y, center);
-	if (displayed_item != NULL) {
+	if (displayed_item) {
 		int X = (int)(w * TILE_SIZE / 2);
-		int Y = (int)(0.35 * TILE_SIZE);
+		int Y = (int)(0.4 * TILE_SIZE);
 		SDL_Rect rect(X, Y);
-		dstr_t name = displayed_item->name[(int)language];
-		Surface title = CSM_font_array[(int)(TILE_SIZE * name.second / 3)].render_shaded_wrapped(name.first, Color::black, Color::sky, (int)(2.4 * TILE_SIZE));
+		dstr_t name = displayed_item.get_name(language);
+		Surface title = CSM_font_array[name.second].render_shaded_wrapped(name.first, Color::black, Color::sky, (int)(2.4 * TILE_SIZE));
 		screen.blit(title, &rect, NULL, top_middle);
 		Y += title->h;
 		rect.y = Y;
 		rect.x = X;
 
-		displayed_item->draw(screen, &rect, mega, top_middle);
+		displayed_item.draw(screen, &rect, mega, top_middle);
 		Y += TILE_SIZE;
 		X = edge;
 
 		rect.y = Y;
 		rect.x = X;
 
-		dstr_t desc = displayed_item->description[(int)language];
+		dstr_t desc = displayed_item.get_desc(language);
 
-		screen.blit(CSM_font_array[(int)(TILE_SIZE * desc.second / 5)].render_blended_wrapped(desc.first, Color::black, (int)(TILE_SIZE * 2.3)), &rect, NULL, top_left);
+		screen.blit(CSM_font_array[desc.second].render_blended_wrapped(desc.first, Color::black, (int)(TILE_SIZE * 2.3)), &rect, NULL, top_left);
 	}
 	else if (displayed_type != typeless) {
 
@@ -1564,12 +1539,12 @@ void InformationDisplay::re_draw() {
 			rect.x = X;
 			rect.y = Y;
 
-			screen.blit(CSM_font_array[(int)(TILE_SIZE / 2)].render_blended(displayed_piece->Class->name[(int)language], Color::black), &rect, NULL, top_middle);
+			screen.blit(CSM_font_array[(int)(TILE_SIZE / 2)].render_blended(displayed_piece->get_name(language), Color::black), &rect, NULL, top_middle);
 			
 			Y += 3 * TILE_SIZE / 4;
-			rect.x = X;
+			rect.x = X - TILE_SIZE / 2;
 			rect.y = Y;
-			screen.blit(displayed_piece->sprite, &rect, NULL, top_middle);
+			displayed_piece->draw(game.board, screen, &rect);
 			
 			X = edge;
 			Y += 5 * TILE_SIZE / 4;
@@ -1591,15 +1566,17 @@ void InformationDisplay::re_draw() {
 			}
 		}
 		else if (displayed_page == 1) {
-			displayed_type = displayed_piece->type;
-			re_draw();
-			displayed_type = typeless;
+			if (displayed_piece->type != typeless) {
+				displayed_type = displayed_piece->type;
+				re_draw();
+				displayed_type = typeless;
+			}
 		}
 		else if (displayed_page == 2) {
-			if (displayed_piece->item != NULL) {
-				displayed_item = &displayed_piece->item->cls;
+			if (displayed_piece->item) {
+				displayed_item = displayed_piece->item;
 				re_draw();
-				displayed_item = NULL;
+				displayed_item = NO_ITEM;
 			}
 		}
 
@@ -1624,7 +1601,7 @@ bool ToggleInformationDisplay::is_active() {
 
 void ToggleInformationDisplay::effect(int, double, double) {
 	game.show_phone = not game.show_phone;
-	game.phone_displayed_item = NULL;
+	game.phone_displayed_item = NO_ITEM;
 	game.phone_displayed_piece = NULL;
 	game.phone_displayed_type = typeless;
 }
@@ -1677,7 +1654,7 @@ ChangeGameruleButton::ChangeGameruleButton(double _x, double _y, bool* ptr, Surf
 	va_list args;
 	va_start(args, msg0);
 	message[0] = msg0;
-	for (int i = 1; i < (int)LANGUAGE::NB_OF_LANGUAGE; i++) {
+	for (int i = 1; i < NB_OF_LANGUAGE; i++) {
 		message[i] = va_arg(args, char const*);
 	}
 	va_end(args);
@@ -1707,8 +1684,7 @@ void ChangeGameruleButton::effect(int, double, double) {
 	(*gamerule_ptr) = not (*gamerule_ptr);
 }
 
-TeraButton::TeraButton(double x, double y, Piece* p, typing t) : Button(x-0.5, y-0.5, 1, 1) {
-	piece = p;
+TeraButton::TeraButton(double x, double y, Piece* p, typing t) : Button(x-0.5, y-0.5, 1, 1), piece(p) {
 	new_type = t;
 }
 
@@ -1723,20 +1699,8 @@ void TeraButton::draw() {
 }
 
 void TeraButton::effect(int, double, double) {
-	move_data data;
-	data.set_type_matchup_data(piece, NULL, piece->square);
-
 	
-	game.selected_piece->tera(new_type);
-	game.selected_piece->set_item(NULL);
-	
-	data.tera = true;
-	data.attacker = game.selected_piece;
-	data.begin_square = data.target_square = game.selected_piece->square;
-	game.change_turn();
-
-	game.board.move_historic.push_front(data);
-	game.board.set_reachable();
+	game.board.tera_piece(piece);
 
 	game.unselect_piece();
 }

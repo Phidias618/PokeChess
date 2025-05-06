@@ -4315,7 +4315,7 @@ char *strdup(const char *str);
    their prototype defined (clang-diagnostic-implicit-function-declaration) */
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 
 #define SDL_malloc malloc
 #define SDL_calloc calloc
